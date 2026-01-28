@@ -8,8 +8,11 @@ import RegisterPage from './components/auth/RegisterPage';
 import PuzzleListPage from './components/student/PuzzleListPage';
 import PuzzleSolvePage from './components/student/PuzzleSolvePage';
 import ResultsPage from './components/student/ResultsPage';
+import StudentProgressPage from './components/student/StudentProgressPage';
 import PuzzleBuilderPage from './components/instructor/PuzzleBuilderPage';
 import PuzzleManagerPage from './components/instructor/PuzzleManagerPage';
+import InstructorAnalyticsPage from './components/instructor/InstructorAnalyticsPage';
+import GlobalInstructorAnalyticsPage from './components/instructor/GlobalInstructorAnalyticsPage';
 
 function AppRoutes() {
     const { user } = useAuth();
@@ -26,10 +29,13 @@ function AppRoutes() {
                 <Route path="/student/puzzles" element={<ProtectedRoute><PuzzleListPage /></ProtectedRoute>} />
                 <Route path="/student/puzzle/:assignmentId" element={<ProtectedRoute><PuzzleSolvePage /></ProtectedRoute>} />
                 <Route path="/student/result/:attemptId" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
+                <Route path="/student/progress" element={<ProtectedRoute><StudentProgressPage /></ProtectedRoute>} />
 
                 {/* Instructor routes */}
                 <Route path="/instructor/puzzles" element={<ProtectedRoute requireInstructor><PuzzleManagerPage /></ProtectedRoute>} />
                 <Route path="/instructor/puzzle/new" element={<ProtectedRoute requireInstructor><PuzzleBuilderPage /></ProtectedRoute>} />
+                <Route path="/instructor/analytics/:puzzleId" element={<ProtectedRoute requireInstructor><InstructorAnalyticsPage /></ProtectedRoute>} />
+                <Route path="/instructor/analytics" element={<ProtectedRoute requireInstructor><GlobalInstructorAnalyticsPage /></ProtectedRoute>} />
 
                 {/* Default redirect */}
                 <Route path="/" element={<Navigate to={user ? (user.role === 'STUDENT' ? '/student/puzzles' : '/instructor/puzzles') : '/login'} />} />

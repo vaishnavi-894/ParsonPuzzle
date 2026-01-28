@@ -165,6 +165,23 @@
 .chart-container {
     background: var(--bg-secondary);
     padding: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+}
+
+.code-snippet {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+}
+
+.bg-dark-soft {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 @media (max-width: 768px) {

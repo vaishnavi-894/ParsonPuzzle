@@ -68,8 +68,9 @@ export const attemptAPI = {
 export const analyticsAPI = {
     getAssignmentAnalytics: (assignmentId) => api.get(`/analytics/assignment/${assignmentId}`),
     getPuzzleAnalytics: (puzzleId) => api.get(`/analytics/puzzle/${puzzleId}`),
-    getStudentProgress: (userId, cohortId) =>
-        api.get(`/analytics/student/${userId}`, { params: { cohort_id: cohortId } }),
+    getStudentProgress: (userId, cohort_id) =>
+        api.get(`/analytics/student/${userId}`, { params: { cohort_id } }),
+    getInstructorSummary: () => api.get('/analytics/instructor/summary'),
 };
 
 export default api;

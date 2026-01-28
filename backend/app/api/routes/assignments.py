@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from typing import List, Optional
+from datetime import datetime
 from app.models.assignment import AssignmentCreate, AssignmentResponse
 from app.models.user import User, UserRole
 from app.services.assignment_service import AssignmentService
@@ -84,36 +85,47 @@ async def get_assignments(
         assignments = []
     
     # Enrich assignments with puzzle details for students
-    # Enrich assignments with puzzle details for students
     enriched_assignments = []
+    
+    # Pre-fetch all attempts for these assignments if student
+    student_attempts_map = {}
+    if current_user.role == UserRole.STUDENT:
+        assignment_ids = [a.assignment_id for a in assignments]
+        # This could be optimized to a single query with $in
+        for assignment_id in assignment_ids:
+            attempts = await AttemptService.get_attempts_by_user(current_user.user_id, assignment_id)
+            student_attempts_map[assignment_id] = attempts
+            
+    now = datetime.utcnow()
+
     for assignment in assignments:
         assignment_dict = assignment.model_dump()
         
-        # Fetch puzzle details
-        print(f"Looking for puzzle with ID: {assignment.puzzle_id}")
-        puzzle = await PuzzleService.get_puzzle(assignment.puzzle_id)
+        # Redundant fields should already be in the model, but we ensure they are returned
+        # If accessing legacy data without these fields, we might need a fallback, 
+        # but for now we assume new/migrated data.
+        # Ideally, we should have a migration script, but here we can lazily fetch if missing
+        if not assignment.puzzle_title:
+             puzzle = await PuzzleService.get_puzzle(assignment.puzzle_id)
+             if puzzle:
+                 assignment_dict["puzzle_title"] = puzzle.title
+                 assignment_dict["puzzle_description"] = puzzle.description
+                 assignment_dict["puzzle_difficulty"] = puzzle.difficulty
         
-        if puzzle:
-            assignment_dict["puzzle_title"] = puzzle.title
-            assignment_dict["puzzle_description"] = puzzle.description
-            assignment_dict["puzzle_difficulty"] = puzzle.difficulty
-            print(f"Enriched with title: {puzzle.title}")
-        
-        # Fetch user progress (if student)
+        # Calculate user status for students
         if current_user.role == UserRole.STUDENT:
-            attempts = await AttemptService.get_attempts_by_user(current_user.user_id, assignment.assignment_id)
+            attempts = student_attempts_map.get(assignment.assignment_id, [])
             assignment_dict["user_attempts_count"] = len(attempts)
             
-            # Check if any attempt is correct
             is_completed = any(attempt.is_correct for attempt in attempts)
             
             if is_completed:
                 assignment_dict["user_status"] = "COMPLETED"
-            elif len(attempts) > 0:
-                assignment_dict["user_status"] = "ATTEMPTED"
+            elif len(attempts) >= assignment.max_attempts or (assignment.end_at and now > assignment.end_at):
+                 assignment_dict["user_status"] = "NOT_COMPLETED" # Failed or Expired
             else:
-                assignment_dict["user_status"] = "NOT_STARTED"
-                
+                 assignment_dict["user_status"] = "YET_TO_COMPLETE" # In progress or not started
+                 
         enriched_assignments.append(assignment_dict)
     
     return enriched_assignments

@@ -16,6 +16,11 @@ class Assignment(BaseModel):
     cohort_id: str
     start_at: datetime
     end_at: datetime
+    # Redundant fields for denormalization
+    puzzle_title: str
+    puzzle_description: str
+    puzzle_difficulty: str
+
     max_attempts: int = 3
     feedback_mode: FeedbackMode = FeedbackMode.IMMEDIATE
     created_by: str  # user_id of instructor
@@ -28,6 +33,9 @@ class Assignment(BaseModel):
                 "cohort_id": "cohort-uuid",
                 "start_at": "2024-01-20T00:00:00",
                 "end_at": "2024-01-27T23:59:59",
+                "puzzle_title": "Binary Search",
+                "puzzle_description": "Implement binary search...",
+                "puzzle_difficulty": "MEDIUM",
                 "max_attempts": 3,
                 "feedback_mode": "IMMEDIATE"
             }
@@ -54,10 +62,10 @@ class AssignmentResponse(BaseModel):
     created_by: str
     created_at: datetime
     
-    # Enriched fields (optional)
-    puzzle_title: Optional[str] = None
-    puzzle_description: Optional[str] = None
-    puzzle_difficulty: Optional[str] = None
+    # Redundant fields (always present now)
+    puzzle_title: str
+    puzzle_description: str
+    puzzle_difficulty: str
     
     # User progress fields (optional, for students)
     user_status: Optional[str] = "NOT_STARTED" # NOT_STARTED, ATTEMPTED, COMPLETED

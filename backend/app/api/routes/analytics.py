@@ -54,3 +54,18 @@ async def get_student_progress(
     
     analytics = await AnalyticsService.get_student_progress(user_id, cohort_id)
     return analytics
+
+
+@router.get("/instructor/summary")
+async def get_instructor_summary(
+    current_user: User = Depends(get_current_user)
+):
+    """Get aggregated analytics for all puzzles of an instructor"""
+    if current_user.role not in [UserRole.INSTRUCTOR, UserRole.ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only instructors can view summary analytics"
+        )
+    
+    analytics = await AnalyticsService.get_instructor_summary(current_user.user_id)
+    return analytics

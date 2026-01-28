@@ -24,14 +24,41 @@ class Database:
         if cls.client is None:
             raise Exception("Database not connected")
         return cls.client[settings.MONGODB_DB_NAME]
-
-
+    
+    @classmethod
+    async def init_db(cls):
+        """Initialize database with collections and indexes"""
+        db = cls.get_db()
+        
+        # User indexes
+        users = db["users"]
+        await users.create_index("email", unique=True)
+        
+        # Puzzle indexes
+        puzzles = db["puzzles"]
+        await puzzles.create_index("puzzle_id", unique=True)
+        
+        # Assignment indexes
+        assignments = db["assignments"]
+        await assignments.create_index("assignment_id", unique=True)
+        await assignments.create_index("cohort_id")
+        await assignments.create_index("puzzle_id")
+        
+        # Attempt indexes
+        attempts = db["attempts"]
+        await attempts.create_index("attempt_id", unique=True)
+        await attempts.create_index("user_id")
+        await attempts.create_index("assignment_id")
+        
+        # Puzzle Block indexes
+        puzzle_blocks = db["puzzle_blocks"]
+        await puzzle_blocks.create_index("puzzle_id")
+        
+        print(f"Database {settings.MONGODB_DB_NAME} initialized with 5 collections")
+        
 # Collection getters
 def get_users_collection():
     return Database.get_db()["users"]
-
-def get_cohorts_collection():
-    return Database.get_db()["cohorts"]
 
 def get_puzzles_collection():
     return Database.get_db()["puzzles"]

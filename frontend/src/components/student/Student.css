@@ -225,3 +225,204 @@
         gap: var(--spacing-md);
     }
 }
+
+/* Tabs */
+.tabs-container {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: var(--spacing-sm);
+    overflow-x: auto;
+}
+
+.tab-btn {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: all var(--transition-base);
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+    background: var(--glass-bg);
+}
+
+.tab-btn.active {
+    color: var(--primary-500);
+    background: rgba(139, 92, 246, 0.1);
+}
+
+/* Puzzle Card Status Styles */
+.puzzle-card.completed {
+    border-left: 4px solid var(--success-500);
+}
+
+.puzzle-card.not-completed {
+    border-left: 4px solid var(--error-500);
+    opacity: 0.8;
+}
+
+.puzzle-card.yet-to-complete {
+    border-left: 4px solid var(--primary-500);
+}
+
+.badges-row {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+}
+
+/* Start Overlay */
+.puzzle-blocks-container {
+    position: relative;
+    /* Ensure overlay is contained */
+}
+
+.start-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: var(--radius-lg);
+}
+
+.start-modal {
+    background: var(--bg-primary);
+    padding: var(--spacing-2xl);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--glass-border);
+}
+
+.start-modal h2 {
+    margin-bottom: var(--spacing-md);
+}
+
+.start-modal p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+}
+
+.blocks-list.blurred {
+    filter: blur(5px);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.6;
+}
+
+/* Solution Blocks */
+.solution-section {
+    margin-top: var(--spacing-xl);
+}
+
+.solution-section h3 {
+    margin-bottom: var(--spacing-lg);
+}
+
+.solution-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.solution-block {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border-left: 3px solid transparent;
+    transition: all var(--transition-base);
+}
+
+.solution-block.correct {
+    border-left-color: var(--success-500);
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.solution-block.incorrect {
+    border-left-color: var(--error-500);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.solution-block .block-number {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    min-width: 24px;
+    text-align: center;
+}
+
+.solution-block code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+/* Result Page Header Variants */
+.results-header.success {
+    border: 2px solid var(--success-500);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+}
+
+.results-header.in-progress {
+    border: 2px solid #3b82f6;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+}
+
+.results-header.failed {
+    border: 2px solid #f97316;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.05));
+}
+
+/* Remaining Attempts Badge */
+.remaining-attempts {
+    color: #3b82f6 !important;
+    font-weight: 700;
+}
+
+/* Motivation Section */
+.motivation-section {
+    padding: var(--spacing-xl);
+    text-align: center;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+    border: 2px solid rgba(139, 92, 246, 0.3);
+}
+
+.motivation-section svg {
+    margin-bottom: var(--spacing-md);
+}
+
+.motivation-section h3 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.motivation-section p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* Text Warning Color */
+.text-warning {
+    color: #3b82f6;
+}

@@ -99,6 +99,14 @@ async def submit_attempt(
             detail="Assignment not found"
         )
     
+    # Check if deadline has passed
+    now = datetime.utcnow()
+    if now > assignment.end_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Assignment deadline has passed. Submission not allowed."
+        )
+    
     # Submit and evaluate
     evaluated_attempt = await AttemptService.submit_attempt(attempt_id, submission, assignment)
     return AttemptResponse(**evaluated_attempt.model_dump())

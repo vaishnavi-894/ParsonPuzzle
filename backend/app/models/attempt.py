@@ -7,6 +7,7 @@ from uuid import uuid4
 class Attempt(BaseModel):
     attempt_id: str = Field(default_factory=lambda: str(uuid4()))
     assignment_id: str
+    puzzle_id: str # Redundant for easier querying
     user_id: str
     started_at: datetime
     submitted_at: Optional[datetime] = None
@@ -41,6 +42,7 @@ class AttemptSubmit(BaseModel):
 class AttemptResponse(BaseModel):
     attempt_id: str
     assignment_id: str
+    puzzle_id: str
     user_id: str
     started_at: datetime
     submitted_at: Optional[datetime]

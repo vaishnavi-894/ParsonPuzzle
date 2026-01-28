@@ -21,6 +21,8 @@ export default function PuzzleSolvePage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [hasActiveAttempt, setHasActiveAttempt] = useState(false);
+    const [showStartModal, setShowStartModal] = useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -40,17 +42,59 @@ export default function PuzzleSolvePage() {
 
             setAssignment(assignmentData);
             setPuzzle(puzzleData);
-            setBlocks(blocksData);
+            // Don't set blocks immediately if we wait for start, but we can show them blurred or just wait.
+            // Actually, we show them but maybe disable interaction until start?
+            // "The way the question should be shown should be different... attempted and yet to attempt should be the same"
+            // Let's hide blocks behind a "Start" overlay.
 
-            // Create attempt
+            // Check for existing attempts
+            const attemptsResponse = await attemptAPI.getAll({ assignment_id: assignmentId });
+            const attempts = attemptsResponse.data;
+
+            // Find active (unsubmitted) attempt
+            const activeAttempt = attempts.find(a => !a.submitted_at);
+
+            if (activeAttempt) {
+                setAttemptId(activeAttempt.attempt_id);
+                setStartTime(new Date(activeAttempt.started_at));
+                setHasActiveAttempt(true);
+                // If we persisted block state, we would load it here. 
+                // For now, we use the shuffled blocks from the server.
+                setBlocks(blocksData);
+            } else {
+                // No active attempt. Check if completed or max attempts reached?
+                // The list page handles navigation restrictions, but here we enforce logic.
+                const isCompleted = attempts.some(a => a.is_correct);
+                if (isCompleted) {
+                    // View mode
+                    setBlocks(blocksData); // Just show blocks
+                    // Maybe disable interaction?
+                } else {
+                    // Ready to start new attempt
+                    setBlocks(blocksData);
+                    setShowStartModal(true);
+                }
+            }
+        } catch (err) {
+            setError('Failed to load puzzle');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStartAttempt = async () => {
+        try {
+            setLoading(true);
             const attemptResponse = await attemptAPI.create({
                 assignment_id: assignmentId,
                 started_at: new Date().toISOString()
             });
             setAttemptId(attemptResponse.data.attempt_id);
             setStartTime(new Date());
+            setHasActiveAttempt(true);
+            setShowStartModal(false);
         } catch (err) {
-            setError('Failed to load puzzle');
+            setError(err.response?.data?.detail || 'Failed to start attempt');
         } finally {
             setLoading(false);
         }
@@ -84,7 +128,7 @@ export default function PuzzleSolvePage() {
             // Navigate to results page
             navigate(`/student/result/${attemptId}`);
         } catch (err) {
-            setError('Failed to submit attempt');
+            setError(err.response?.data?.detail || 'Failed to submit attempt');
         } finally {
             setSubmitting(false);
         }
@@ -121,6 +165,24 @@ export default function PuzzleSolvePage() {
                 </div>
             )}
 
+            {assignment && (() => {
+                const now = new Date();
+                const deadline = new Date(assignment.end_at);
+                const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
+
+                if (hoursUntilDeadline > 0 && hoursUntilDeadline <= 24) {
+                    const hours = Math.floor(hoursUntilDeadline);
+                    const minutes = Math.floor((hoursUntilDeadline - hours) * 60);
+                    return (
+                        <div className="alert alert-warning">
+                            ⚠️ Deadline approaching! {hours}h {minutes}m remaining until {deadline.toLocaleString()}
+                        </div>
+                    );
+                }
+                return null;
+            })()}
+
+
             <div className="puzzle-solve-container">
                 <div className="puzzle-instructions card">
                     <h3>Instructions</h3>
@@ -131,7 +193,7 @@ export default function PuzzleSolvePage() {
                 <div className="puzzle-blocks-container card">
                     <div className="blocks-header">
                         <h3>Code Blocks</h3>
-                        <button onClick={handleReset} className="btn btn-secondary">
+                        <button onClick={handleReset} className="btn btn-secondary" disabled={!hasActiveAttempt}>
                             <RotateCcw size={18} />
                             Reset
                         </button>
@@ -145,8 +207,9 @@ export default function PuzzleSolvePage() {
                         <SortableContext
                             items={blocks.map(b => b.block_id)}
                             strategy={verticalListSortingStrategy}
+                            disabled={!hasActiveAttempt}
                         >
-                            <div className="blocks-list">
+                            <div className={`blocks-list ${!hasActiveAttempt ? 'blurred' : ''}`}>
                                 {blocks.map((block, index) => (
                                     <DraggableBlock
                                         key={block.block_id}
@@ -158,13 +221,26 @@ export default function PuzzleSolvePage() {
                             </div>
                         </SortableContext>
                     </DndContext>
+
+                    {showStartModal && (
+                        <div className="start-overlay">
+                            <div className="start-modal card">
+                                <h2>Ready to Start?</h2>
+                                <p>You have a limited number of attempts to solve this puzzle.</p>
+                                <p>The timer will start when you begin.</p>
+                                <button onClick={handleStartAttempt} className="btn btn-primary btn-lg">
+                                    Start Attempt
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="puzzle-actions">
                     <button
                         onClick={handleSubmit}
                         className="btn btn-primary btn-lg"
-                        disabled={submitting}
+                        disabled={submitting || !hasActiveAttempt}
                     >
                         <Send size={18} />
                         {submitting ? 'Submitting...' : 'Submit Solution'}

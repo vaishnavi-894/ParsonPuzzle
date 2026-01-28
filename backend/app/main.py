@@ -24,6 +24,7 @@ app.add_middleware(
 async def startup_db_client():
     """Connect to MongoDB on startup"""
     await Database.connect_db()
+    await Database.init_db()
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

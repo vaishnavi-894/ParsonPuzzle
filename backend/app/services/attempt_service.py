@@ -2,6 +2,7 @@ from typing import List, Optional
 from app.models.attempt import Attempt, AttemptCreate, AttemptSubmit
 from app.models.assignment import Assignment
 from app.core.database import get_attempts_collection
+from app.services.assignment_service import AssignmentService
 from app.services.evaluation_engine import EvaluationEngine
 from app.services.puzzle_service import PuzzleService
 from datetime import datetime
@@ -11,6 +12,11 @@ class AttemptService:
     @staticmethod
     async def create_attempt(attempt_data: AttemptCreate, user_id: str) -> Attempt:
         """Create a new attempt"""
+        # Get assignment to fetch puzzle_id
+        assignment = await AssignmentService.get_assignment(attempt_data.assignment_id)
+        if not assignment:
+            raise ValueError("Assignment not found")
+            
         # Get current attempt number for this user and assignment
         collection = get_attempts_collection()
         existing_attempts = await collection.count_documents({
@@ -20,6 +26,7 @@ class AttemptService:
         
         attempt = Attempt(
             user_id=user_id,
+            puzzle_id=assignment.puzzle_id, # Populate redundant field
             attempt_number=existing_attempts + 1,
             **attempt_data.model_dump()
         )

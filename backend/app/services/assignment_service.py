@@ -8,8 +8,18 @@ class AssignmentService:
     @staticmethod
     async def create_assignment(assignment_data: AssignmentCreate, created_by: str) -> Assignment:
         """Create a new assignment (publish puzzle to cohort)"""
+        from app.services.puzzle_service import PuzzleService
+        
+        # Fetch puzzle details for redundancy
+        puzzle = await PuzzleService.get_puzzle(assignment_data.puzzle_id)
+        if not puzzle:
+            raise ValueError("Puzzle not found")
+            
         assignment = Assignment(
             created_by=created_by,
+            puzzle_title=puzzle.title,
+            puzzle_description=puzzle.description,
+            puzzle_difficulty=puzzle.difficulty,
             **assignment_data.model_dump()
         )
         
