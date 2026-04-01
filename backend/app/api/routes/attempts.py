@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from typing import List, Optional
 from app.models.attempt import AttemptCreate, AttemptSubmit, AttemptResponse
+from app.models.attempt_state import AttemptPause, AttemptResume
 from app.models.user import User
 from app.services.attempt_service import AttemptService
 from app.services.assignment_service import AssignmentService
@@ -25,38 +26,8 @@ async def create_attempt(
             detail="Assignment not found"
         )
     
-    # Check if user has exceeded max attempts
-    attempt_count = await AttemptService.get_user_attempt_count(
-        current_user.user_id,
-        attempt_data.assignment_id
-    )
-    
-    print(f"User {current_user.user_id} attempt count: {attempt_count}/{assignment.max_attempts}")
-    
-    if attempt_count >= assignment.max_attempts:
-        print(f"Max attempts exceeded: {attempt_count} >= {assignment.max_attempts}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Maximum attempts ({assignment.max_attempts}) exceeded"
-        )
-    
-    # Check time window
-    now = datetime.utcnow()
-    print(f"Time check - Now: {now}, Start: {assignment.start_at}, End: {assignment.end_at}")
-    
-    if now < assignment.start_at:
-        print(f"Assignment has not started yet. Now: {now}, Start: {assignment.start_at}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignment has not started yet"
-        )
-    
-    if now > assignment.end_at:
-        print(f"Assignment deadline has passed. Now: {now}, End: {assignment.end_at}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignment deadline has passed"
-        )
+    # Note: No longer checking max_attempts or deadlines
+    # Students can attempt puzzles unlimited times with no time restrictions
     
     attempt = await AttemptService.create_attempt(attempt_data, current_user.user_id)
     return AttemptResponse(**attempt.model_dump())
@@ -99,13 +70,7 @@ async def submit_attempt(
             detail="Assignment not found"
         )
     
-    # Check if deadline has passed
-    now = datetime.utcnow()
-    if now > assignment.end_at:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Assignment deadline has passed. Submission not allowed."
-        )
+    # Note: No longer checking deadline - students can submit anytime
     
     # Submit and evaluate
     evaluated_attempt = await AttemptService.submit_attempt(attempt_id, submission, assignment)
@@ -162,3 +127,77 @@ async def get_attempts(
         attempts = await AttemptService.get_attempts_by_user(current_user.user_id)
     
     return [AttemptResponse(**attempt.model_dump()) for attempt in attempts]
+
+
+@router.post("/{attempt_id}/pause", response_model=AttemptResponse)
+async def pause_attempt(
+    attempt_id: str,
+    pause_data: AttemptPause,
+    current_user: User = Depends(get_current_user)
+):
+    """Pause an attempt and save current progress"""
+    # Get attempt
+    attempt = await AttemptService.get_attempt(attempt_id)
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attempt not found"
+        )
+    
+    # Verify ownership
+    if attempt.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only pause your own attempts"
+        )
+    
+    # Check if already submitted
+    if attempt.submitted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot pause a submitted attempt"
+        )
+    
+    # Check if already paused
+    if attempt.is_paused:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Attempt is already paused"
+        )
+    
+    # Pause the attempt
+    paused_attempt = await AttemptService.pause_attempt(attempt_id, pause_data.current_order)
+    return AttemptResponse(**paused_attempt.model_dump())
+
+
+@router.post("/{attempt_id}/resume", response_model=AttemptResponse)
+async def resume_attempt(
+    attempt_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Resume a paused attempt"""
+    # Get attempt
+    attempt = await AttemptService.get_attempt(attempt_id)
+    if not attempt:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attempt not found"
+        )
+    
+    # Verify ownership
+    if attempt.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only resume your own attempts"
+        )
+    
+    # Check if actually paused
+    if not attempt.is_paused:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Attempt is not paused"
+        )
+    
+    # Resume the attempt
+    resumed_attempt = await AttemptService.resume_attempt(attempt_id)
+    return AttemptResponse(**resumed_attempt.model_dump())

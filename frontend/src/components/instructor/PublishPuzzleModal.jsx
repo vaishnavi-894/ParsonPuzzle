@@ -5,9 +5,6 @@ import { X, Send } from 'lucide-react';
 export default function PublishPuzzleModal({ puzzle, onClose, onPublished }) {
     const [formData, setFormData] = useState({
         cohort_id: 'default-cohort', // Simplified: using a default cohort
-        start_at: new Date().toISOString().slice(0, 16),
-        end_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
-        max_attempts: 3,
         feedback_mode: 'IMMEDIATE'
     });
 
@@ -23,9 +20,6 @@ export default function PublishPuzzleModal({ puzzle, onClose, onPublished }) {
             await assignmentAPI.create({
                 puzzle_id: puzzle.puzzle_id,
                 cohort_id: formData.cohort_id,
-                start_at: new Date(formData.start_at).toISOString(),
-                end_at: new Date(formData.end_at).toISOString(),
-                max_attempts: parseInt(formData.max_attempts),
                 feedback_mode: formData.feedback_mode
             });
 
@@ -61,41 +55,6 @@ export default function PublishPuzzleModal({ puzzle, onClose, onPublished }) {
                     )}
 
                     <form onSubmit={handleSubmit} className="publish-form">
-                        <div className="form-group">
-                            <label>Start Date & Time</label>
-                            <input
-                                type="datetime-local"
-                                className="input"
-                                value={formData.start_at}
-                                onChange={(e) => setFormData({ ...formData, start_at: e.target.value })}
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>End Date & Time</label>
-                            <input
-                                type="datetime-local"
-                                className="input"
-                                value={formData.end_at}
-                                onChange={(e) => setFormData({ ...formData, end_at: e.target.value })}
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Maximum Attempts</label>
-                            <input
-                                type="number"
-                                className="input"
-                                min="1"
-                                max="10"
-                                value={formData.max_attempts}
-                                onChange={(e) => setFormData({ ...formData, max_attempts: e.target.value })}
-                                required
-                            />
-                        </div>
-
                         <div className="form-group">
                             <label>Feedback Mode</label>
                             <select

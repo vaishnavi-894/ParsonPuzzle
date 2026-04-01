@@ -66,9 +66,10 @@ class AttemptService:
             puzzle_blocks
         )
         
-        # Calculate time taken
+        # Calculate time taken (excluding pause duration)
         submitted_at = datetime.utcnow()
         time_taken_sec = int((submitted_at - attempt.started_at).total_seconds())
+        time_taken_sec -= attempt.total_pause_duration_sec  # Subtract paused time
         
         # Update attempt with results
         update_data = {
@@ -77,7 +78,8 @@ class AttemptService:
             "submitted_order": submission.submitted_order,
             "is_correct": evaluation["is_correct"],
             "score": evaluation["score"],
-            "feedback": evaluation["feedback"]
+            "feedback": evaluation["feedback"],
+            "is_paused": False  # Ensure paused flag is cleared on submission
         }
         
         await collection.update_one(
@@ -118,3 +120,49 @@ class AttemptService:
             "assignment_id": assignment_id
         })
         return count
+    
+    @staticmethod
+    async def pause_attempt(attempt_id: str, current_order: List[str]) -> Attempt:
+        """Pause an attempt and save current progress"""
+        collection = get_attempts_collection()
+        
+        update_data = {
+            "is_paused": True,
+            "paused_at": datetime.utcnow(),
+            "current_order": current_order
+        }
+        
+        await collection.update_one(
+            {"attempt_id": attempt_id},
+            {"$set": update_data}
+        )
+        
+        return await AttemptService.get_attempt(attempt_id)
+    
+    @staticmethod
+    async def resume_attempt(attempt_id: str) -> Attempt:
+        """Resume a paused attempt"""
+        collection = get_attempts_collection()
+        
+        # Get current attempt to calculate pause duration
+        attempt = await AttemptService.get_attempt(attempt_id)
+        if not attempt or not attempt.paused_at:
+            raise ValueError("Attempt not found or not paused")
+        
+        # Calculate pause duration and add to total
+        resumed_at = datetime.utcnow()
+        pause_duration_sec = int((resumed_at - attempt.paused_at).total_seconds())
+        total_pause_duration = attempt.total_pause_duration_sec + pause_duration_sec
+        
+        update_data = {
+            "is_paused": False,
+            "paused_at": None,
+            "total_pause_duration_sec": total_pause_duration
+        }
+        
+        await collection.update_one(
+            {"attempt_id": attempt_id},
+            {"$set": update_data}
+        )
+        
+        return await AttemptService.get_attempt(attempt_id)

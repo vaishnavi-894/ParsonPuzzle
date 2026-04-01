@@ -9,7 +9,9 @@ import random
 class PuzzleService:
     @staticmethod
     async def create_puzzle(puzzle_data: PuzzleCreate, created_by: str) -> Puzzle:
-        """Create a new puzzle"""
+        """Create a new puzzle and auto-generate blocks from code"""
+        from app.services.code_parser import CodeParser
+        
         puzzle = Puzzle(
             created_by=created_by,
             **puzzle_data.model_dump()
@@ -17,6 +19,17 @@ class PuzzleService:
         
         collection = get_puzzles_collection()
         await collection.insert_one(puzzle.model_dump())
+        
+        # Auto-generate blocks from code_text
+        if puzzle_data.code_text:
+            blocks_data = CodeParser.generate_blocks_from_code(
+                puzzle_data.code_text,
+                puzzle.puzzle_id
+            )
+            blocks_collection = get_puzzle_blocks_collection()
+            if blocks_data:
+                await blocks_collection.insert_many(blocks_data)
+        
         return puzzle
     
     @staticmethod

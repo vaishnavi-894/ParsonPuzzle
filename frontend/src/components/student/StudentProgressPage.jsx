@@ -1,52 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { analyticsAPI } from '../../services/api';
+import { assignmentAPI, attemptAPI } from '../../services/api';
 import {
     Trophy,
     Target,
     Clock,
     Zap,
-    BarChart3,
     TrendingUp,
     AlertCircle,
-    Loader2
+    Loader2,
+    ChevronRight
 } from 'lucide-react';
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { useNavigate } from 'react-router-dom';
 import './StudentProgressPage.css';
-
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend
-);
 
 export default function StudentProgressPage() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [stats, setStats] = useState(null);
+    const [puzzleStats, setPuzzleStats] = useState([]);
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchPuzzleStats = async () => {
             try {
-                const response = await analyticsAPI.getStudentProgress(user.user_id);
-                setStats(response.data);
+                // Get all assignments for the student
+                const assignmentsResponse = await assignmentAPI.getAll({ active_only: false });
+                const assignments = assignmentsResponse.data;
+
+                // For each assignment, fetch attempts and calculate stats
+                const statsPromises = assignments.map(async (assignment) => {
+                    try {
+                        const attemptsResponse = await attemptAPI.getAll({
+                            assignment_id: assignment.assignment_id
+                        });
+                        const attempts = attemptsResponse.data || [];
+
+                        // Calculate stats for this puzzle
+                        const submittedAttempts = attempts.filter(a => a.submitted_at);
+                        const totalAttempts = submittedAttempts.length;
+                        const isCompleted = submittedAttempts.some(a => a.is_correct);
+                        const bestScore = submittedAttempts.length > 0
+                            ? Math.max(...submittedAttempts.map(a => a.score || 0))
+                            : 0;
+                        const avgTime = submittedAttempts.length > 0
+                            ? submittedAttempts.reduce((sum, a) => sum + (a.time_taken_sec || 0), 0) / submittedAttempts.length
+                            : 0;
+
+                        return {
+                            assignment_id: assignment.assignment_id,
+                            puzzle_id: assignment.puzzle_id,
+                            title: assignment.puzzle_title || 'Untitled Puzzle',
+                            difficulty: assignment.puzzle_difficulty || 'MEDIUM',
+                            description: assignment.puzzle_description || '',
+                            totalAttempts,
+                            isCompleted,
+                            bestScore,
+                            avgTime,
+                            attempts: submittedAttempts
+                        };
+                    } catch (err) {
+                        console.error(`Failed to fetch attempts for ${assignment.assignment_id}:`, err);
+                        return null;
+                    }
+                });
+
+                const stats = (await Promise.all(statsPromises)).filter(s => s !== null);
+                setPuzzleStats(stats);
             } catch (err) {
-                console.error('Failed to fetch stats:', err);
+                console.error('Failed to fetch puzzle stats:', err);
                 setError('Failed to load your progress data. Please try again later.');
             } finally {
                 setLoading(false);
@@ -54,9 +76,24 @@ export default function StudentProgressPage() {
         };
 
         if (user?.user_id) {
-            fetchStats();
+            fetchPuzzleStats();
         }
     }, [user?.user_id]);
+
+    const getDifficultyColor = (difficulty) => {
+        switch (difficulty) {
+            case 'EASY': return 'success';
+            case 'MEDIUM': return 'warning';
+            case 'HARD': return 'error';
+            default: return 'primary';
+        }
+    };
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     if (loading) {
         return (
@@ -76,78 +113,22 @@ export default function StudentProgressPage() {
         );
     }
 
-    const lineChartData = {
-        labels: stats.recent_trends.map((_, index) => `Attempt ${index + 1}`),
-        datasets: [
-            {
-                label: 'Time Taken (sec)',
-                data: stats.recent_trends.map(t => t.time_sec),
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                yAxisID: 'y',
-            },
-            {
-                label: 'Score (%)',
-                data: stats.recent_trends.map(t => t.score * 100),
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.5)',
-                yAxisID: 'y1',
-            }
-        ],
-    };
-
-    const lineChartOptions = {
-        responsive: true,
-        interaction: {
-            mode: 'index',
-            intersect: false,
-        },
-        stacked: false,
-        plugins: {
-            legend: {
-                position: 'top',
-                labels: {
-                    color: '#94a3b8'
-                }
-            },
-        },
-        scales: {
-            y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                grid: {
-                    color: 'rgba(148, 163, 184, 0.1)'
-                },
-                ticks: { color: '#94a3b8' }
-            },
-            y1: {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                grid: {
-                    drawOnChartArea: false,
-                },
-                ticks: { color: '#94a3b8' },
-                min: 0,
-                max: 100
-            },
-            x: {
-                grid: {
-                    color: 'rgba(148, 163, 184, 0.1)'
-                },
-                ticks: { color: '#94a3b8' }
-            }
-        },
-    };
+    // Calculate summary stats
+    const totalPuzzles = puzzleStats.length;
+    const completedPuzzles = puzzleStats.filter(p => p.isCompleted).length;
+    const totalAttempts = puzzleStats.reduce((sum, p) => sum + p.totalAttempts, 0);
+    const avgScore = totalAttempts > 0
+        ? puzzleStats.reduce((sum, p) => sum + p.bestScore, 0) / totalPuzzles
+        : 0;
 
     return (
         <div className="progress-container">
             <header className="progress-header">
                 <h1>My Progress</h1>
-                <p>Track your learning journey and puzzle performance</p>
+                <p>Track your performance on each puzzle</p>
             </header>
 
+            {/* Summary Stats */}
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-icon">
@@ -155,7 +136,7 @@ export default function StudentProgressPage() {
                     </div>
                     <div className="stat-info">
                         <h3>Puzzles Completed</h3>
-                        <div className="stat-value">{stats.completed_puzzles} / {stats.total_puzzles}</div>
+                        <div className="stat-value">{completedPuzzles} / {totalPuzzles}</div>
                     </div>
                 </div>
 
@@ -164,8 +145,8 @@ export default function StudentProgressPage() {
                         <Target size={24} />
                     </div>
                     <div className="stat-info">
-                        <h3>Average Score</h3>
-                        <div className="stat-value">{(stats.average_score * 100).toFixed(1)}%</div>
+                        <h3>Average Best Score</h3>
+                        <div className="stat-value">{(avgScore * 100).toFixed(1)}%</div>
                     </div>
                 </div>
 
@@ -175,7 +156,7 @@ export default function StudentProgressPage() {
                     </div>
                     <div className="stat-info">
                         <h3>Total Attempts</h3>
-                        <div className="stat-value">{stats.total_attempts}</div>
+                        <div className="stat-value">{totalAttempts}</div>
                     </div>
                 </div>
 
@@ -185,64 +166,104 @@ export default function StudentProgressPage() {
                     </div>
                     <div className="stat-info">
                         <h3>Completion Rate</h3>
-                        <div className="stat-value">{(stats.completion_rate * 100).toFixed(1)}%</div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="charts-grid">
-                <div className="chart-card">
-                    <h3>
-                        <BarChart3 size={20} />
-                        Difficulty Breakdown
-                    </h3>
-                    <div className="difficulty-bars">
-                        {Object.entries(stats.difficulty_breakdown).map(([diff, data]) => {
-                            const percent = data.total > 0 ? (data.completed / data.total) * 100 : 0;
-                            return (
-                                <div key={diff} className="diff-item">
-                                    <div className="diff-label">
-                                        <span>{diff}</span>
-                                        <span>{data.completed}/{data.total} ({percent.toFixed(0)}%)</span>
-                                    </div>
-                                    <div className="bar-bg">
-                                        <div
-                                            className={`bar-fill ${diff.toLowerCase()}`}
-                                            style={{ width: `${percent}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="chart-card">
-                    <h3>
-                        <TrendingUp size={20} />
-                        Performance Trends
-                    </h3>
-                    {stats.recent_trends.length > 0 ? (
-                        <Line data={lineChartData} options={lineChartOptions} />
-                    ) : (
-                        <div className="no-data">No recent attempts yet. Start solving to see trends!</div>
-                    )}
-                </div>
-            </div>
-
-            <div className="chart-card">
-                <h3>
-                    <Zap size={20} />
-                    Top Topics
-                </h3>
-                <div className="tags-list">
-                    {stats.top_tags.length > 0 ? stats.top_tags.map(tag => (
-                        <div key={tag.tag} className="tag-badge">
-                            <span className="tag-name">{tag.tag}</span>
-                            <span className="tag-count">{tag.count} solved</span>
+                        <div className="stat-value">
+                            {totalPuzzles > 0 ? ((completedPuzzles / totalPuzzles) * 100).toFixed(1) : 0}%
                         </div>
-                    )) : (
-                        <div className="no-data">Solve puzzles to see your top topics!</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Per-Puzzle Breakdown */}
+            <div className="puzzle-breakdown-section">
+                <h2>📊 Per-Puzzle Performance</h2>
+                <div className="puzzle-list">
+                    {puzzleStats.length === 0 ? (
+                        <div className="no-data">No puzzles assigned yet. Check back later!</div>
+                    ) : (
+                        puzzleStats.map((puzzle) => (
+                            <div
+                                key={puzzle.assignment_id}
+                                className={`puzzle-stat-card ${puzzle.isCompleted ? 'completed' : 'in-progress'}`}
+                                onClick={() => navigate(`/student/puzzle/${puzzle.assignment_id}`)}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <div className="puzzle-stat-header">
+                                    <div>
+                                        <h3>{puzzle.title}</h3>
+                                        <div className="puzzle-badges">
+                                            <span className={`badge badge-${getDifficultyColor(puzzle.difficulty)}`}>
+                                                {puzzle.difficulty}
+                                            </span>
+                                            {puzzle.isCompleted ? (
+                                                <span className="badge badge-success">✓ Completed</span>
+                                            ) : puzzle.totalAttempts > 0 ? (
+                                                <span className="badge badge-primary">In Progress</span>
+                                            ) : (
+                                                <span className="badge badge-secondary">Not Started</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={20} className="chevron-icon" />
+                                </div>
+
+                                <div className="puzzle-stat-metrics">
+                                    <div className="metric">
+                                        <div className="metric-icon">
+                                            <Zap size={16} />
+                                        </div>
+                                        <div className="metric-info">
+                                            <span className="metric-label">Attempts</span>
+                                            <span className="metric-value">{puzzle.totalAttempts}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="metric">
+                                        <div className="metric-icon">
+                                            <Target size={16} />
+                                        </div>
+                                        <div className="metric-info">
+                                            <span className="metric-label">Best Score</span>
+                                            <span className="metric-value">
+                                                {puzzle.totalAttempts > 0
+                                                    ? `${(puzzle.bestScore * 100).toFixed(0)}%`
+                                                    : '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="metric">
+                                        <div className="metric-icon">
+                                            <Clock size={16} />
+                                        </div>
+                                        <div className="metric-info">
+                                            <span className="metric-label">Avg Time</span>
+                                            <span className="metric-value">
+                                                {puzzle.totalAttempts > 0
+                                                    ? formatTime(puzzle.avgTime)
+                                                    : '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {puzzle.totalAttempts > 1 && (
+                                        <div className="metric">
+                                            <div className="metric-icon">
+                                                <TrendingUp size={16} />
+                                            </div>
+                                            <div className="metric-info">
+                                                <span className="metric-label">Trend</span>
+                                                <span className="metric-value">
+                                                    {puzzle.attempts.length >= 2 ? (
+                                                        puzzle.attempts[puzzle.attempts.length - 1].score >
+                                                            puzzle.attempts[0].score ? '📈' : '📉'
+                                                    ) : '-'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))
                     )}
                 </div>
             </div>

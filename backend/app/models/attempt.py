@@ -18,6 +18,12 @@ class Attempt(BaseModel):
     feedback: Optional[Dict] = None  # Detailed feedback
     attempt_number: int = 1
     
+    # Pause/Resume functionality
+    is_paused: bool = False
+    paused_at: Optional[datetime] = None
+    total_pause_duration_sec: int = 0
+    current_order: List[str] = []  # Save current block arrangement
+    
     class Config:
         json_schema_extra = {
             "example": {
@@ -51,3 +57,6 @@ class AttemptResponse(BaseModel):
     score: Optional[float]
     feedback: Optional[Dict]
     attempt_number: int
+    # Pause/Resume fields
+    is_paused: bool = False
+    current_order: List[str] = []

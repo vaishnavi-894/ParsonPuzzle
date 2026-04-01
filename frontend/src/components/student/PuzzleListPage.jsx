@@ -12,7 +12,7 @@ export default function PuzzleListPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
 
-    const [filter, setFilter] = useState('ALL'); // ALL, COMPLETED, YET_TO_COMPLETE, NOT_COMPLETED
+    const [filter, setFilter] = useState('ALL'); // ALL, COMPLETED, YET_TO_COMPLETE
 
     useEffect(() => {
         loadAssignments();
@@ -21,7 +21,7 @@ export default function PuzzleListPage() {
     const loadAssignments = async () => {
         try {
             const response = await assignmentAPI.getAll({
-                active_only: false // We need all assignments to show completed/not completed ones too
+                active_only: false
             });
             console.log('Assignments response:', response.data);
             setAssignments(response.data);
@@ -91,13 +91,7 @@ export default function PuzzleListPage() {
                     className={`tab-btn ${filter === 'YET_TO_COMPLETE' ? 'active' : ''}`}
                     onClick={() => setFilter('YET_TO_COMPLETE')}
                 >
-                    Yet to Complete
-                </button>
-                <button
-                    className={`tab-btn ${filter === 'NOT_COMPLETED' ? 'active' : ''}`}
-                    onClick={() => setFilter('NOT_COMPLETED')}
-                >
-                    Not Completed
+                    In Progress
                 </button>
             </div>
 
@@ -111,14 +105,12 @@ export default function PuzzleListPage() {
                 <div className="puzzle-grid">
                     {filteredAssignments.map((assignment) => {
                         const handleCardClick = async () => {
-                            if (assignment.user_status === 'COMPLETED' || assignment.user_status === 'NOT_COMPLETED') {
-                                // Fetch the most recent attempt to show results
+                            if (assignment.user_status === 'COMPLETED') {
                                 try {
                                     const attemptsResponse = await attemptAPI.getAll({ assignment_id: assignment.assignment_id });
                                     const attempts = attemptsResponse.data;
 
                                     if (attempts && attempts.length > 0) {
-                                        // Find the most recent completed attempt
                                         const completedAttempt = attempts
                                             .filter(a => a.submitted_at)
                                             .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0];
@@ -133,7 +125,6 @@ export default function PuzzleListPage() {
                                 }
                             }
 
-                            // Default: navigate to solve page
                             navigate(`/student/puzzle/${assignment.assignment_id}`);
                         };
 
@@ -152,31 +143,10 @@ export default function PuzzleListPage() {
                                         </span>
                                         {assignment.user_status && (
                                             <span className={`badge badge-${getStatusColor(assignment.user_status)}`}>
-                                                {assignment.user_status.replace(/_/g, ' ')}
+                                                {assignment.user_status === 'YET_TO_COMPLETE' ? 'In Progress' :
+                                                    assignment.user_status.replace(/_/g, ' ')}
                                             </span>
                                         )}
-                                        {(() => {
-                                            // Only show EXPIRED if the backend marked it as NOT_COMPLETED due to deadline
-                                            if (assignment.user_status === 'NOT_COMPLETED') {
-                                                const attempts = assignment.user_attempts_count || 0;
-                                                const maxAttempts = assignment.max_attempts || 3;
-
-                                                // If max attempts reached, don't show EXPIRED (show attempts exhausted message)
-                                                if (attempts < maxAttempts) {
-                                                    return <span className="badge badge-error">EXPIRED</span>;
-                                                }
-                                            } else if (assignment.user_status === 'YET_TO_COMPLETE') {
-                                                // Show deadline warning for incomplete assignments
-                                                const now = new Date();
-                                                const deadline = new Date(assignment.end_at);
-                                                const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
-
-                                                if (hoursUntilDeadline > 0 && hoursUntilDeadline <= 24) {
-                                                    return <span className="badge badge-warning">DEADLINE SOON</span>;
-                                                }
-                                            }
-                                            return null;
-                                        })()}
                                     </div>
                                 </div>
 
@@ -188,23 +158,14 @@ export default function PuzzleListPage() {
 
                                 <div className="puzzle-card-meta">
                                     <div className="meta-item">
-                                        <Clock size={16} />
-                                        <span>Due: {new Date(assignment.end_at).toLocaleString()}</span>
-                                    </div>
-                                    <div className="meta-item">
                                         <Trophy size={16} />
-                                        <span>Max Attempts: {assignment.max_attempts}</span>
-                                    </div>
-                                    <div className="meta-item">
                                         <span>Attempts: {assignment.user_attempts_count || 0}</span>
                                     </div>
                                 </div>
 
                                 <div className="puzzle-card-footer">
                                     <span className="text-primary">
-                                        {assignment.user_status === 'COMPLETED' ? 'Review Solution' :
-                                            assignment.user_status === 'NOT_COMPLETED' ? 'View Solution' :
-                                                'Start Puzzle →'}
+                                        {assignment.user_status === 'COMPLETED' ? 'Review Solution' : 'Start Puzzle →'}
                                     </span>
                                 </div>
                             </div>

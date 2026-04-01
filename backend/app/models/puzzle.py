@@ -27,6 +27,7 @@ class Puzzle(BaseModel):
     created_by: str  # user_id of instructor
     title: str
     description: str  # Problem statement
+    code_text: Optional[str] = None  # Original code pasted by instructor
     difficulty: Difficulty = Difficulty.MEDIUM
     tags: List[str] = []
     status: PuzzleStatus = PuzzleStatus.DRAFT
@@ -48,6 +49,7 @@ class Puzzle(BaseModel):
 class PuzzleCreate(BaseModel):
     title: str
     description: str
+    code_text: str  # Required: Code to generate blocks from
     difficulty: Difficulty = Difficulty.MEDIUM
     tags: List[str] = []
 

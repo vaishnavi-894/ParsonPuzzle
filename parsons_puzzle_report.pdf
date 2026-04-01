@@ -1,0 +1,195 @@
+# Parsons Puzzle — Project Report
+
+## 1. Tech Stack
+
+### Backend
+| Layer | Technology | Version |
+|---|---|---|
+| Framework | FastAPI | 0.115.6 |
+| ASGI Server | Uvicorn (standard) | 0.34.0 |
+| Database Driver | Motor (async MongoDB) | 3.6.0 |
+| Data Validation | Pydantic / Pydantic-Settings | 2.10.6 / 2.7.1 |
+| Auth | PyJWT + passlib[bcrypt] | 2.10.1 / 1.7.4 |
+| Password Hashing | bcrypt | 4.1.2 |
+| Config | python-dotenv | 1.0.1 |
+| Language | Python 3 | — |
+
+### Frontend
+| Layer | Technology | Version |
+|---|---|---|
+| UI Framework | React | 18.2.0 |
+| Build Tool | Vite | 5.0.8 |
+| Routing | React Router DOM | 6.21.0 |
+| Drag-and-Drop | @dnd-kit/core + sortable | 6.1.0 / 8.0.0 |
+| Code Editor | @monaco-editor/react | 4.7.0 |
+| Syntax Highlight | react-syntax-highlighter | 16.1.0 |
+| HTTP Client | Axios | 1.6.2 |
+| Charts | Chart.js + react-chartjs-2 | 4.4.1 / 5.2.0 |
+| Icons | Lucide React | 0.303.0 |
+| Language | JavaScript (ESM) | — |
+
+### Infrastructure
+| Component | Technology |
+|---|---|
+| Database | MongoDB (NoSQL) |
+| Containerisation | Docker + Docker Compose |
+| Web Server (prod) | Nginx |
+
+---
+
+## 2. Architecture Overview
+
+```
+Frontend (React + Vite)
+    │  REST (Axios)
+    ▼
+Backend (FastAPI)
+ ├── /auth          – JWT register/login/me
+ ├── /puzzles       – CRUD + block management
+ ├── /assignments   – Publish puzzles to cohorts
+ ├── /attempts      – Create / submit / pause / resume
+ └── /analytics     – Instructor dashboards
+    │
+    ▼
+MongoDB (Motor async driver)
+```
+
+---
+
+## 3. Block Parsing Logic (New: Every Line is a Block)
+
+> **Change Summary**: The [CodeParser](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py#12-251) service now treats **each individual line** as its own block for certain puzzle types, while also supporting intelligent multi-line grouping (AST-based for Python, indentation-based for pseudocode). The [_finalize_block](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py#181-197) function assembles the final block objects with `correct_position`, `indentation_level`, [is_comment](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py#214-219), and `line_number` fields.
+
+### [code_parser.py](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py) — [CodeParser](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py#12-251)
+
+The [parse_code](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py#15-34) entry point tries Python AST first; if that fails (e.g. pseudocode), it falls back to an indentation-based grouper. The key rule is: **every line becomes its own block by default**; lines are only merged if they belong to the same control-flow construct (e.g. the body of an `if` or [for](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/evaluation_engine.py#117-147)). Comments always get their own block regardless.
+
+```python
+@staticmethod
+def parse_code(code_text: str) -> List[Dict[str, Any]]:
+    lines = code_text.split('\n')
+    try:
+        tree = ast.parse(code_text)
+        return CodeParser._parse_with_ast(code_text, tree, lines)
+    except SyntaxError:
+        return CodeParser._parse_with_indentation(lines)
+```
+
+Each parsed block is then stamped with `correct_position`, `indentation_level`, [is_comment](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py#214-219), and `line_number` before being saved to MongoDB via [generate_blocks_from_code](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/code_parser.py#221-251).
+
+---
+
+## 4. Data Model — [PuzzleBlock](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/models/puzzle_block.py#13-36)
+
+```python
+class PuzzleBlock(BaseModel):
+    block_id: str = Field(default_factory=lambda: str(uuid4()))
+    puzzle_id: str
+    text: str                         # Code line/segment shown to student
+    correct_position: int             # Ground-truth order (0-indexed)
+    block_type: BlockType = BlockType.NORMAL   # NORMAL | DECOY
+    explanation: Optional[str] = None
+    indentation_level: int = 0        # Leading spaces count
+    is_comment: bool = False
+    line_number: int = 0              # Original source line
+    created_at: datetime
+```
+
+---
+
+## 5. Evaluation Engine — [EvaluationEngine](file:///c:/Users/chitt/Documents/ParsonPuzzle/backend/app/services/evaluation_engine.py#5-178)
+
+The engine validates the submission format, computes an exact-match score (all blocks in correct order = 1.0) and a partial score (fraction of blocks in correct positions), then generates per-block mismatch feedback.
+
+```python
+@staticmethod
+def evaluate_attempt(submitted_order, puzzle_blocks):
+    is_valid, error = EvaluationEngine.validate_submission_format(submitted_order, puzzle_blocks)
+    if not is_valid:
+        return {"is_correct": False, "score": 0.0, "feedback": {"error": error}}
+    is_correct    = EvaluationEngine.compute_exact_match_score(submitted_order, puzzle_blocks)
+    partial_score = EvaluationEngine.compute_partial_score(submitted_order, puzzle_blocks)
+    feedback      = EvaluationEngine.generate_feedback(submitted_order, puzzle_blocks, is_correct)
+    return {"is_correct": is_correct, "score": 1.0 if is_correct else partial_score, "feedback": feedback}
+```
+
+---
+
+## 6. Backend API Routes
+
+### Auth — `/auth`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/auth/register` | Register new user (Student/Instructor) |
+| POST | `/auth/login` | Login → returns JWT bearer token |
+| GET | `/auth/me` | Get current authenticated user |
+
+#### JWT Auth Dependency
+```python
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    payload = AuthService.decode_access_token(credentials.credentials)
+    user_data = await collection.find_one({"user_id": payload.get("sub")})
+    return User(**user_data)
+```
+
+### Puzzles — `/puzzles`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/puzzles` | Create puzzle (instructor only) |
+| GET | `/puzzles/{id}` | Get puzzle by ID |
+| PUT | `/puzzles/{id}` | Update puzzle |
+| POST | `/puzzles/{id}/blocks` | Add blocks to a puzzle |
+| GET | `/puzzles/{id}/blocks` | Get blocks (hides `correct_position` from students) |
+| GET | `/puzzles` | Get all puzzles by current instructor |
+
+### Attempts — `/attempts`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/attempts` | Create/start attempt |
+| POST | `/attempts/{id}/submit` | Submit and evaluate |
+| GET | `/attempts/{id}` | Get attempt by ID |
+| GET | `/attempts` | List attempts (filtered by user/assignment) |
+| POST | `/attempts/{id}/pause` | Save progress and pause |
+| POST | `/attempts/{id}/resume` | Resume paused attempt |
+
+---
+
+## 7. Frontend — Puzzle Solve Page ([PuzzleSolvePage.jsx](file:///c:/Users/chitt/Documents/ParsonPuzzle/frontend/src/components/student/PuzzleSolvePage.jsx))
+
+Uses **@dnd-kit** for drag-and-drop between two panels: **Block Bank** (right) and **Code Editor** (left).
+
+The page manages two block lists — `editorBlocks` (the student's arranged solution) and `bankBlocks` (the pool of unused blocks). A live timer tracks elapsed time. On submit, only the ordered list of `block_id`s is sent to the backend.
+
+#### Cross-container Drag (Bank ↔ Editor)
+```jsx
+const handleDragOver = ({ active, over }) => {
+    const fromContainer = findContainer(active.id);
+    const toContainer   = findContainer(over.id);
+    if (!fromContainer || !toContainer || fromContainer === toContainer) return;
+    setEditorBlocks(editor => {
+        const newEditor = [...editor];
+        setBankBlocks(bank => {
+            const newBank  = [...bank];
+            const fromList = fromContainer === 'editor' ? newEditor : newBank;
+            const toList   = toContainer   === 'editor' ? newEditor : newBank;
+            const [moved]  = fromList.splice(fromList.findIndex(b => b.block_id === active.id), 1);
+            const overIdx  = toList.findIndex(b => b.block_id === over.id);
+            toList.splice(overIdx >= 0 ? overIdx : toList.length, 0, moved);
+            return [...newBank];
+        });
+        return [...newEditor];
+    });
+};
+```
+
+---
+
+## 8. Deployment
+
+```yaml
+# docker-compose.yml (summary)
+services:
+  backend:   FastAPI + Uvicorn  (port 8000)
+  frontend:  React + Nginx      (port 80)
+  mongodb:   MongoDB            (port 27017)
+```

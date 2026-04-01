@@ -121,10 +121,8 @@ async def get_assignments(
             
             if is_completed:
                 assignment_dict["user_status"] = "COMPLETED"
-            elif len(attempts) >= assignment.max_attempts or (assignment.end_at and now > assignment.end_at):
-                 assignment_dict["user_status"] = "NOT_COMPLETED" # Failed or Expired
             else:
-                 assignment_dict["user_status"] = "YET_TO_COMPLETE" # In progress or not started
+                assignment_dict["user_status"] = "YET_TO_COMPLETE"  # In progress or not started
                  
         enriched_assignments.append(assignment_dict)
     
@@ -154,14 +152,34 @@ async def get_assignment_puzzle(
     # Get blocks (shuffled for students)
     shuffle = current_user.role == UserRole.STUDENT
     blocks = await PuzzleService.get_puzzle_blocks(assignment.puzzle_id, shuffle=shuffle)
-    
-    # Hide correct_position from students
+
+    # Build ordered list of distinct function names (in correct_position order for
+    # instructors; in shuffled order for students the function order still comes
+    # from the sorted-by-correct_position list so the selector is stable).
+    sorted_blocks = sorted(blocks, key=lambda b: b.correct_position)
+    seen_fns: list = []
+    for b in sorted_blocks:
+        fn = getattr(b, 'function_name', None)
+        if fn and fn not in seen_fns:
+            seen_fns.append(fn)
+    functions_list = seen_fns
+
+    # Scope fields every client needs (students included)
+    _SCOPE_FIELDS = ('function_name', 'scope_id', 'parent_scope_id',
+                     'is_scope_header', 'scope_type')
+
     if current_user.role == UserRole.STUDENT:
         blocks_data = [
             {
-                "block_id": block.block_id,
-                "text": block.text,
-                "block_type": block.block_type
+                "block_id":        block.block_id,
+                "text":            block.text,
+                "block_type":      block.block_type,
+                # scope metadata (needed for function/loop drill-down)
+                "function_name":   getattr(block, 'function_name',   None),
+                "scope_id":        getattr(block, 'scope_id',        None),
+                "parent_scope_id": getattr(block, 'parent_scope_id', None),
+                "is_scope_header": getattr(block, 'is_scope_header', False),
+                "scope_type":      getattr(block, 'scope_type',      None),
             }
             for block in blocks
         ]
@@ -170,6 +188,7 @@ async def get_assignment_puzzle(
     
     return {
         "assignment": assignment.model_dump(),
-        "puzzle": puzzle.model_dump(),
-        "blocks": blocks_data
+        "puzzle":     puzzle.model_dump(),
+        "blocks":     blocks_data,
+        "functions":  functions_list,   # ordered list of function names for UI selector
     }
