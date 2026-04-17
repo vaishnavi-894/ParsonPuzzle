@@ -12,7 +12,7 @@ class Attempt(BaseModel):
     started_at: datetime
     submitted_at: Optional[datetime] = None
     time_taken_sec: Optional[int] = None
-    submitted_order: List[str] = []  # List of block_ids in submitted order
+    submitted_order: List[str] = Field(default_factory=list)  # List of block_ids in submitted order
     is_correct: Optional[bool] = None
     score: Optional[float] = None  # 0.0 to 1.0
     feedback: Optional[Dict] = None  # Detailed feedback
@@ -22,7 +22,7 @@ class Attempt(BaseModel):
     is_paused: bool = False
     paused_at: Optional[datetime] = None
     total_pause_duration_sec: int = 0
-    current_order: List[str] = []  # Save current block arrangement
+    current_order: List[str] = Field(default_factory=list)  # Save current block arrangement
     
     class Config:
         json_schema_extra = {
@@ -43,6 +43,7 @@ class AttemptCreate(BaseModel):
 
 class AttemptSubmit(BaseModel):
     submitted_order: List[str]  # List of block_ids
+    time_taken_sec: Optional[int] = None
 
 
 class AttemptResponse(BaseModel):
@@ -59,4 +60,4 @@ class AttemptResponse(BaseModel):
     attempt_number: int
     # Pause/Resume fields
     is_paused: bool = False
-    current_order: List[str] = []
+    current_order: List[str] = Field(default_factory=list)

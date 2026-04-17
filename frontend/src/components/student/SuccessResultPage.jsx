@@ -5,7 +5,8 @@ import './Student.css';
 
 export default function SuccessResultPage({ attempt, blocks, totalTimeSec }) {
     const navigate = useNavigate();
-    const { score, time_taken_sec, attempt_number, submitted_order } = attempt;
+    const { score, attempt_number } = attempt;
+    const scorePct = Number.isFinite(score) ? Math.round(score * 100) : 0;
 
     // Get correct order
     const correctOrder = [...blocks].sort((a, b) => a.correct_position - b.correct_position);
@@ -22,7 +23,7 @@ export default function SuccessResultPage({ attempt, blocks, totalTimeSec }) {
                 <div className="results-stats">
                     <div className="stat-card card">
                         <h3>Score</h3>
-                        <div className="stat-value">{Math.round(score * 100)}%</div>
+                        <div className="stat-value">{scorePct}%</div>
                     </div>
                     <div className="stat-card card">
                         <h3>Total Time</h3>

@@ -170,13 +170,13 @@ export default function PuzzleBuilderPage() {
             const stripped = raw.trim();
             if (!stripped) return;
 
-            // Skip lines that are ONLY brackets/braces — same logic as backend parser.
-            // E.g.  `}`, `{`, `};`  are skipped; `} else {` is kept.
-            if (/^[\s{}\(\)\[\];,]*$/.test(stripped)) return;
-
             const indent = getIndent(raw);
             while (stack.length && indent <= stack[stack.length - 1].indent)
                 stack.pop();
+
+            // Skip lines that are ONLY brackets/braces — same logic as backend parser.
+            // E.g.  `}`, `{`, `};`  are skipped; `} else {` is kept.
+            if (/^[\s{}\(\)\[\];,]*$/.test(stripped)) return;
 
             const fnName  = matchFunction(raw);
             const loopTyp = matchLoop(raw);

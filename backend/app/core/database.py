@@ -1,3 +1,14 @@
+# ── Windows WMI hang fix ─────────────────────────────────────────────────────
+# pymongo 4.x calls platform._wmi_query() (a PowerShell subprocess) to build
+# client handshake metadata.  On some Windows 11 builds this hangs forever.
+# Patching it before the motor import prevents the hang with no runtime impact.
+import platform as _platform
+# Patch win32_ver to avoid a hanging WMI/PowerShell subprocess call that
+# pymongo triggers on some Windows 11 builds when building client metadata.
+_platform.win32_ver = lambda release='', version='', csd='', ptype='': ('11', '10.0.26200', '', '')  # type: ignore[attr-defined]
+if hasattr(_platform, '_wmi_query'):
+    _platform._wmi_query = lambda table, *keys: ('' for _ in keys)  # type: ignore[attr-defined]
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
 from typing import Optional

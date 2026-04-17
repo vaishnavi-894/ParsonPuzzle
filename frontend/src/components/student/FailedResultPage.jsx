@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { XCircle, Home, BookOpen } from 'lucide-react';
 import './Student.css';
 
-export default function FailedResultPage({ attempt, blocks, totalTimeSec, totalAttempts }) {
+export default function FailedResultPage({ attempt, blocks, totalTimeSec }) {
     const navigate = useNavigate();
-    const { score, time_taken_sec, attempt_number, submitted_order } = attempt;
+    const { score, submitted_order } = attempt;
+    const scorePct = Number.isFinite(score) ? Math.round(score * 100) : 0;
 
     // Create a map for easy block lookup
     const blockMap = {};
@@ -30,16 +31,12 @@ export default function FailedResultPage({ attempt, blocks, totalTimeSec, totalA
 
                 <div className="results-stats">
                     <div className="stat-card card">
-                        <h3>Best Score</h3>
-                        <div className="stat-value">{Math.round(score * 100)}%</div>
+                        <h3>Correct Position</h3>
+                        <div className="stat-value">{scorePct}%</div>
                     </div>
                     <div className="stat-card card">
                         <h3>Total Time</h3>
                         <div className="stat-value">{Math.floor(totalTimeSec / 60)}:{(totalTimeSec % 60).toString().padStart(2, '0')}</div>
-                    </div>
-                    <div className="stat-card card">
-                        <h3>Total Attempts</h3>
-                        <div className="stat-value">{totalAttempts}</div>
                     </div>
                 </div>
 
@@ -65,6 +62,18 @@ export default function FailedResultPage({ attempt, blocks, totalTimeSec, totalA
                         </div>
                     </div>
                 )}
+
+                <div className="solution-section card">
+                    <h3>Correct Solution</h3>
+                    <div className="solution-blocks">
+                        {correctOrder.map((block, index) => (
+                            <div key={block.block_id} className="solution-block correct">
+                                <span className="block-number">{index + 1}</span>
+                                <code>{block.text}</code>
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
                 <div className="results-actions">
                     <button onClick={() => navigate('/student/puzzles')} className="btn btn-primary btn-lg">

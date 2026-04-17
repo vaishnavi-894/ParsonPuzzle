@@ -72,8 +72,6 @@ export default function ResultsPage() {
             attempt={attempt}
             blocks={blocks}
             totalTimeSec={totalTimeSec}
-            remainingAttempts={remainingAttempts}
-            maxAttempts={assignment.max_attempts}
         />;
     } else {
         // Failed: Show solution for learning
@@ -81,7 +79,6 @@ export default function ResultsPage() {
             attempt={attempt}
             blocks={blocks}
             totalTimeSec={totalTimeSec}
-            totalAttempts={submittedAttempts}
         />;
     }
 }

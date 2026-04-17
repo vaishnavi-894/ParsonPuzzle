@@ -39,6 +39,26 @@ function DroppablePanel({ id, children, className }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
+/*  Pure helper – get scope blocks from raw data (no state dependency)        */
+/* ────────────────────────────────────────────────────────────────────────── */
+function getScopeBlocksRaw(blocksData, path, headersData) {
+    if (path.length === 0) return [];
+    if (path.length === 1) {
+        const scopeToken = path[0];
+        const fnEntry = Object.entries(headersData).find(
+            ([, hdr]) => hdr?.scope_id === scopeToken
+        );
+        const fnName       = fnEntry ? fnEntry[0] : scopeToken;
+        const fnHdrScopeId = headersData[fnName]?.scope_id ?? null;
+        return blocksData.filter(b =>
+            b.function_name === fnName && b.parent_scope_id === fnHdrScopeId
+        );
+    }
+    const parentId = path[path.length - 1];
+    return blocksData.filter(b => b.parent_scope_id === parentId);
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
 /*  Main component                                                            */
 /* ────────────────────────────────────────────────────────────────────────── */
 export default function PuzzleSolvePage() {
@@ -77,6 +97,9 @@ export default function PuzzleSolvePage() {
     const [hasActiveAttempt, setHasActiveAttempt] = useState(false);
     const [showStartModal, setShowStartModal]     = useState(false);
     const [elapsed, setElapsed]                   = useState('0:00');
+    const [elapsedSeconds, setElapsedSeconds]     = useState(0);
+    const [timerStartedAt, setTimerStartedAt]     = useState(null);
+    // Tracks when the student FIRST opens a question — timer only starts then
 
     /* ── Per-scope arranged blocks ─────────────────────────────────── */
     const [scopeEditors, setScopeEditors] = useState({});
@@ -91,8 +114,78 @@ export default function PuzzleSolvePage() {
     /* ── Stale-closure refs ────────────────────────────────────────── */
     const editorRef = useRef(editorBlocks);
     const bankRef   = useRef(bankBlocks);
+    const scopeEditorsRef = useRef(scopeEditors);
+    const scopePathRef = useRef(scopePath);
+    const scopeLabelsRef = useRef(scopeLabels);
+    const pendingLoopStackRef = useRef(pendingLoopStack);
+    const elapsedSecondsRef = useRef(elapsedSeconds);
+    const timerStartedAtRef = useRef(timerStartedAt);
     useEffect(() => { editorRef.current = editorBlocks; }, [editorBlocks]);
     useEffect(() => { bankRef.current   = bankBlocks;   }, [bankBlocks]);
+    useEffect(() => { scopeEditorsRef.current = scopeEditors; }, [scopeEditors]);
+    useEffect(() => { scopePathRef.current = scopePath; }, [scopePath]);
+    useEffect(() => { scopeLabelsRef.current = scopeLabels; }, [scopeLabels]);
+    useEffect(() => { pendingLoopStackRef.current = pendingLoopStack; }, [pendingLoopStack]);
+    useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
+    useEffect(() => { timerStartedAtRef.current = timerStartedAt; }, [timerStartedAt]);
+
+    const scopeKeyStable = (path) => path.join('::') || '__root__';
+
+    const buildScopeEditorsSnapshot = (path = scopePathRef.current, editor = editorRef.current) => (
+        path.length === 0
+            ? { ...scopeEditorsRef.current }
+            : { ...scopeEditorsRef.current, [scopeKeyStable(path)]: editor }
+    );
+
+    const persistPuzzleState = ({
+        attemptId: attemptIdOverride = attemptId,
+        scopePath: scopePathOverride = scopePathRef.current,
+        scopeLabels: scopeLabelsOverride = scopeLabelsRef.current,
+        editorBlocks: editorBlocksOverride = editorRef.current,
+        pendingLoopStack: pendingLoopStackOverride = pendingLoopStackRef.current,
+        elapsedSeconds: elapsedSecondsOverride = elapsedSecondsRef.current,
+    } = {}) => {
+        if (!attemptIdOverride) return;
+        const scopeEditorsSnapshot = buildScopeEditorsSnapshot(scopePathOverride, editorBlocksOverride);
+        const state = {
+            attemptId: attemptIdOverride,
+            scopeEditors: scopeEditorsSnapshot,
+            currentScopePath: scopePathOverride,
+            currentScopeLabels: scopeLabelsOverride,
+            currentEditorBlocks: editorBlocksOverride,
+            pendingLoopStack: pendingLoopStackOverride,
+            elapsedSeconds: elapsedSecondsOverride,
+        };
+        localStorage.setItem(`parsons_state_${assignmentId}`, JSON.stringify(state));
+    };
+
+    const formatElapsed = (secs) => {
+        const safeSecs = Math.max(0, Math.floor(secs));
+        const m = Math.floor(safeSecs / 60);
+        const s = safeSecs % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const getLiveElapsedSeconds = () => {
+        const base = elapsedSecondsRef.current ?? 0;
+        if (!timerStartedAtRef.current) return base;
+        return base + Math.floor((Date.now() - timerStartedAtRef.current) / 1000);
+    };
+
+    const stopTimer = () => {
+        if (!timerStartedAtRef.current) return elapsedSecondsRef.current ?? 0;
+        const nextElapsed = getLiveElapsedSeconds();
+        setElapsedSeconds(nextElapsed);
+        setTimerStartedAt(null);
+        return nextElapsed;
+    };
+
+    const ensureTimerRunning = () => {
+        if (!hasActiveAttempt) return;
+        if (!timerStartedAtRef.current) {
+            setTimerStartedAt(Date.now());
+        }
+    };
 
     /* ── Sensors ───────────────────────────────────────────────────── */
     const sensors = useSensors(
@@ -127,17 +220,25 @@ export default function PuzzleSolvePage() {
         window.addEventListener('mouseup', onMouseUp);
     }, []);
 
-    /* ── Timer ─────────────────────────────────────────────────────── */
+    /* ── Timer — starts when student first opens a question ────────── */
     useEffect(() => {
-        if (!startTime) return;
-        const id = setInterval(() => {
-            const secs = Math.floor((Date.now() - startTime) / 1000);
-            const m = Math.floor(secs / 60);
-            const s = secs % 60;
-            setElapsed(`${m}:${s.toString().padStart(2, '0')}`);
-        }, 1000);
+        const calc = () => setElapsed(formatElapsed(getLiveElapsedSeconds()));
+        calc();
+        if (!timerStartedAt) return;
+        const id = setInterval(calc, 1000);
         return () => clearInterval(id);
-    }, [startTime]);
+    }, [elapsedSeconds, timerStartedAt]);
+
+    /* ── Persist state to localStorage on every relevant change ─────── */
+    useEffect(() => {
+        persistPuzzleState();
+    }, [attemptId, scopeEditors, editorBlocks, scopePath, scopeLabels, pendingLoopStack, elapsedSeconds]);
+
+    useEffect(() => {
+        return () => {
+            persistPuzzleState({ elapsedSeconds: getLiveElapsedSeconds() });
+        };
+    }, [assignmentId, attemptId]);
 
     /* ── Load ──────────────────────────────────────────────────────── */
     useEffect(() => { loadPuzzle(); }, [assignmentId]);
@@ -172,13 +273,65 @@ export default function PuzzleSolvePage() {
                 setAttemptId(active.attempt_id);
                 setStartTime(new Date(active.started_at).getTime());
                 setHasActiveAttempt(true);
+
+                // ── Restore from localStorage ────────────────────────
+                const storageKey = `parsons_state_${assignmentId}`;
+                let restored = false;
+                try {
+                    const savedRaw = localStorage.getItem(storageKey);
+                    if (savedRaw) {
+                        const saved = JSON.parse(savedRaw);
+                        if (saved.attemptId === active.attempt_id) {
+                            setScopeEditors(saved.scopeEditors || {});
+
+                            // Restore timer
+                            setElapsedSeconds(saved.elapsedSeconds || 0);
+                            setTimerStartedAt(null);
+                            setElapsed(formatElapsed(saved.elapsedSeconds || 0));
+                            setPendingLoopStack(saved.pendingLoopStack || []);
+
+                            // Restore scope navigation
+                            const restoredPath   = saved.currentScopePath   || [];
+                            const restoredLabels = saved.currentScopeLabels || [];
+                            setScopePath(restoredPath);
+                            setScopeLabels(restoredLabels);
+
+                            // Restore live editor + bank for the current scope
+                            if (restoredPath.length > 0) {
+                                const restoredEditor = saved.currentEditorBlocks || [];
+                                const scopeAll = getScopeBlocksRaw(blocks, restoredPath, hdrs);
+                                const placedIds = new Set(restoredEditor.map(b => b.block_id));
+                                setEditorBlocks(restoredEditor);
+                                setBankBlocks(scopeAll.filter(b => !placedIds.has(b.block_id)));
+                            }
+                            restored = true;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to restore puzzle state from localStorage', e);
+                }
+                if (!restored) {
+                    setScopePath([]);
+                    setScopeLabels([]);
+                    setEditorBlocks([]);
+                    setBankBlocks([]);
+                    setPendingLoopStack([]);
+                    setElapsedSeconds(0);
+                    setTimerStartedAt(null);
+                    setElapsed('0:00');
+                }
             } else {
                 const done = attempts.some(a => a.is_correct);
                 if (!done) setShowStartModal(true);
+                setScopePath([]);
+                setScopeLabels([]);
+                setEditorBlocks([]);
+                setBankBlocks([]);
+                setPendingLoopStack([]);
+                setElapsedSeconds(0);
+                setTimerStartedAt(null);
+                setElapsed('0:00');
             }
-
-            setScopePath([]);
-            setScopeLabels([]);
         } catch {
             setError('Failed to load puzzle');
         } finally {
@@ -198,6 +351,9 @@ export default function PuzzleSolvePage() {
             setStartTime(Date.now());
             setHasActiveAttempt(true);
             setShowStartModal(false);
+            setElapsedSeconds(0);
+            setTimerStartedAt(null);
+            setElapsed('0:00');
         } catch (err) {
             setError(err.response?.data?.detail || 'Failed to start attempt');
         } finally {
@@ -210,15 +366,17 @@ export default function PuzzleSolvePage() {
 
     /* ── Enter an arbitrary scope path ─────────────────────────────── */
     const navigateToScope = (newPath, newLabels, currentEditorOverride = null) => {
+        const currentEditor = currentEditorOverride ?? editorBlocks;
+        const scopeEditorsSnapshot = buildScopeEditorsSnapshot(scopePath, currentEditor);
+
         // Save current editor state to its proper scope key BEFORE navigating
-        const key = scopeKey(scopePath);
-        setScopeEditors(prev => ({ ...prev, [key]: currentEditorOverride || editorBlocks }));
+        setScopeEditors(scopeEditorsSnapshot);
 
         setScopePath(newPath);
         setScopeLabels(newLabels);
 
         const newKey = scopeKey(newPath);
-        const saved  = scopeEditors[newKey] || [];
+        const saved  = scopeEditorsSnapshot[newKey] || [];
         loadScopeView(newPath, saved);
     };
 
@@ -229,9 +387,12 @@ export default function PuzzleSolvePage() {
 
     /* ── Go back one level ─────────────────────────────────────────── */
     const goBack = () => {
+        ensureTimerRunning();
+        const currentKey = scopeKey(scopePath);
+        const scopeEditorsSnapshot = { ...scopeEditors, [currentKey]: editorBlocks };
+
         // Save current scope editor
-        const key = scopeKey(scopePath);
-        setScopeEditors(prev => ({ ...prev, [key]: editorBlocks }));
+        setScopeEditors(scopeEditorsSnapshot);
 
         const newPath   = scopePath.slice(0, -1);
         const newLabels = scopeLabels.slice(0, -1);
@@ -239,7 +400,7 @@ export default function PuzzleSolvePage() {
         setScopeLabels(newLabels);
 
         const newKey = scopeKey(newPath);
-        let savedEditor = scopeEditors[newKey] || [];
+        let savedEditor = scopeEditorsSnapshot[newKey] || [];
 
         // If we just finished a pending-loop body, auto-place the loop header
         if (pendingLoopStack.length > 0) {
@@ -259,6 +420,10 @@ export default function PuzzleSolvePage() {
 
     /* ── Select a function ─────────────────────────────────────────── */
     const selectFunction = (fnName) => {
+        ensureTimerRunning();
+        const scopeEditorsSnapshot = buildScopeEditorsSnapshot();
+        setScopeEditors(scopeEditorsSnapshot);
+
         const fnHeader   = functionHeaders[fnName];
         const scopeToken = fnHeader?.scope_id ?? fnName;
 
@@ -268,7 +433,7 @@ export default function PuzzleSolvePage() {
         setScopeLabels(newLabels);
 
         const newKey = scopeKey(newPath);
-        const saved  = scopeEditors[newKey] || [];
+        const saved  = scopeEditorsSnapshot[newKey] || [];
         loadScopeView(newPath, saved);
     };
 
@@ -363,6 +528,7 @@ export default function PuzzleSolvePage() {
 
     /* ── Reset current scope ───────────────────────────────────────── */
     const handleReset = () => {
+        ensureTimerRunning();
         const scopeBlocks = getScopeBlocks(scopePath);
         setBankBlocks(scopeBlocks);
         setEditorBlocks([]);
@@ -379,6 +545,7 @@ export default function PuzzleSolvePage() {
         const finalScopeEditors = { ...scopeEditors, [key]: editorBlocks };
 
         try {
+            const finalElapsedSeconds = stopTimer();
             const allPlaced = [];
             for (const arr of Object.values(finalScopeEditors)) {
                 allPlaced.push(...arr);
@@ -387,7 +554,12 @@ export default function PuzzleSolvePage() {
 
             await attemptAPI.submit(attemptId, {
                 submitted_order: allPlaced.map(b => b.block_id),
+                time_taken_sec: finalElapsedSeconds,
             });
+            // Clear persisted state now that the attempt is submitted
+            localStorage.removeItem(`parsons_state_${assignmentId}`);
+            setPendingLoopStack([]);
+            setElapsedSeconds(finalElapsedSeconds);
             navigate(`/student/result/${attemptId}`);
         } catch (err) {
             setError(err.response?.data?.detail || 'Failed to submit attempt');
@@ -407,6 +579,7 @@ export default function PuzzleSolvePage() {
     };
 
     const handleDragStart = ({ active }) => {
+        ensureTimerRunning();
         const all = [...editorRef.current, ...bankRef.current];
         setActiveBlock(all.find(b => b.block_id === active.id) ?? null);
     };
@@ -782,12 +955,11 @@ export default function PuzzleSolvePage() {
                             {bankBlocks.length === 0 ? (
                                 <div className="bank-empty-hint">
                                     <span>All blocks placed! 🎉</span>
-                                    {/* Show Go Back when inside a loop body */}
-                                    {scopePath.length > 1 && (
+                                    {scopePath.length > 0 && (
                                         <button
                                             className="btn-go-back-loop"
                                             onClick={goBack}
-                                            title="Return to parent scope"
+                                            title={scopePath.length > 1 ? "Return to parent scope" : "Return to function list"}
                                         >
                                             <ArrowLeftCircle size={15} />
                                             {pendingLoopStack.length > 0

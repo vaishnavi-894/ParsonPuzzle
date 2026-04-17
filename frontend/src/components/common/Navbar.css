@@ -1,7 +1,10 @@
 .navbar {
-    background: var(--glass-bg);
-    border-bottom: 1px solid var(--glass-border);
-    backdrop-filter: blur(10px);
+    background:
+        linear-gradient(180deg, rgba(15, 16, 29, 0.94), rgba(15, 16, 29, 0.72)),
+        radial-gradient(circle at top left, rgba(255, 138, 76, 0.15), transparent 40%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 10px 32px rgba(3, 6, 18, 0.28);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -18,15 +21,17 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
     color: var(--text-primary);
     text-decoration: none;
-    transition: opacity var(--transition-base);
+    transition: opacity var(--transition-base), transform var(--transition-base);
 }
 
 .navbar-brand:hover {
-    opacity: 0.8;
+    opacity: 0.92;
+    transform: translateY(-1px);
 }
 
 .navbar-menu {
@@ -42,11 +47,15 @@
     color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
-    transition: color var(--transition-base);
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    transition: color var(--transition-base), background var(--transition-base), transform var(--transition-base);
 }
 
 .nav-link:hover {
     color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
 }
 
 .nav-user {
@@ -54,10 +63,12 @@
     align-items: center;
     gap: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(255, 126, 69, 0.14), rgba(77, 193, 255, 0.12));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
     color: var(--text-secondary);
     font-size: 0.875rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 768px) {

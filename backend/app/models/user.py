@@ -22,7 +22,7 @@ class UserProfile(BaseModel):
     department: Optional[str] = None
     student_roll: Optional[str] = None
     cohort_id: Optional[str] = None
-    preferences: Optional[dict] = {}
+    preferences: Optional[dict] = Field(default_factory=dict)
 
 
 class User(BaseModel):

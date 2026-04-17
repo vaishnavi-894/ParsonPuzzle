@@ -58,9 +58,9 @@ async def register(user_data: UserCreate):
     password_hash = AuthService.hash_password(user_data.password)
     
     # Create user document
-    profile_data = user_data.profile or {}
+    profile_data = user_data.profile.model_dump() if user_data.profile else {}
     if user_data.role == UserRole.STUDENT:
-        profile_data["cohort_id"] = "default-cohort"
+        profile_data.setdefault("cohort_id", "default-cohort")
 
     user_doc = {
         "user_id": str(uuid.uuid4()),

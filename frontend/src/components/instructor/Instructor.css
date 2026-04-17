@@ -127,6 +127,133 @@
     gap: var(--spacing-sm);
 }
 
+.instructor-puzzle-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+
+.instructor-puzzle-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 320px;
+    background:
+        radial-gradient(circle at top right, rgba(255, 145, 83, 0.14), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(90, 205, 255, 0.1), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+        rgba(16, 16, 28, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.instructor-puzzle-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.07) 50%, transparent 80%);
+    transform: translateX(-120%);
+    transition: transform 650ms ease;
+    pointer-events: none;
+}
+
+.instructor-puzzle-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(255, 171, 112, 0.28);
+    box-shadow: 0 26px 54px rgba(6, 9, 21, 0.34);
+}
+
+.instructor-puzzle-card:hover::before {
+    transform: translateX(120%);
+}
+
+.instructor-puzzle-card.status-published {
+    border-color: rgba(74, 211, 151, 0.18);
+}
+
+.instructor-card-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.instructor-card-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.95rem;
+}
+
+.instructor-card-hero h3 {
+    margin-bottom: 0.4rem;
+    font-size: 1.55rem;
+    letter-spacing: -0.03em;
+}
+
+.instructor-card-hero p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.instructor-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.9rem;
+    background: linear-gradient(135deg, rgba(255, 128, 72, 0.22), rgba(255, 196, 88, 0.16));
+    color: var(--accent-500);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.instructor-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.instructor-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.instructor-card-tags {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.instructor-tag-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.instructor-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 /* Analytics */
 .analytics-container {
     display: flex;

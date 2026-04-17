@@ -29,7 +29,7 @@ class Puzzle(BaseModel):
     description: str  # Problem statement
     code_text: Optional[str] = None  # Original code pasted by instructor
     difficulty: Difficulty = Difficulty.MEDIUM
-    tags: List[str] = []
+    tags: List[str] = Field(default_factory=list)
     status: PuzzleStatus = PuzzleStatus.DRAFT
     shuffle_seed_mode: ShuffleSeedMode = ShuffleSeedMode.PER_ATTEMPT
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -51,7 +51,7 @@ class PuzzleCreate(BaseModel):
     description: str
     code_text: str  # Required: Code to generate blocks from
     difficulty: Difficulty = Difficulty.MEDIUM
-    tags: List[str] = []
+    tags: List[str] = Field(default_factory=list)
 
 
 class PuzzleUpdate(BaseModel):

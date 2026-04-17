@@ -1,3 +1,19 @@
+# ── Windows fixes (must run before any other imports) ────────────────────────
+import asyncio
+import sys
+import platform as _platform
+
+# 1. Patch win32_ver/_wmi_query: pymongo 4.x's PowerShell/WMI subprocess call
+#    hangs indefinitely on some Windows 11 builds.
+_platform.win32_ver = lambda release='', version='', csd='', ptype='': ('11', '10.0.26200', '', '')
+if hasattr(_platform, '_wmi_query'):
+    _platform._wmi_query = lambda table, *keys: ('' for _ in keys)  # type: ignore
+
+# 2. SelectorEventLoop: Python 3.12+ defaults to ProactorEventLoop on Windows,
+#    which prevents uvicorn from accepting TCP connections when paired with motor.
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings

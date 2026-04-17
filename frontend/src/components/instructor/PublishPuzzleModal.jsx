@@ -3,11 +3,6 @@ import { assignmentAPI } from '../../services/api';
 import { X, Send } from 'lucide-react';
 
 export default function PublishPuzzleModal({ puzzle, onClose, onPublished }) {
-    const [formData, setFormData] = useState({
-        cohort_id: 'default-cohort', // Simplified: using a default cohort
-        feedback_mode: 'IMMEDIATE'
-    });
-
     const [publishing, setPublishing] = useState(false);
     const [error, setError] = useState('');
 
@@ -19,8 +14,7 @@ export default function PublishPuzzleModal({ puzzle, onClose, onPublished }) {
         try {
             await assignmentAPI.create({
                 puzzle_id: puzzle.puzzle_id,
-                cohort_id: formData.cohort_id,
-                feedback_mode: formData.feedback_mode
+                cohort_id: 'default-cohort',
             });
 
             onPublished();
@@ -55,18 +49,6 @@ export default function PublishPuzzleModal({ puzzle, onClose, onPublished }) {
                     )}
 
                     <form onSubmit={handleSubmit} className="publish-form">
-                        <div className="form-group">
-                            <label>Feedback Mode</label>
-                            <select
-                                className="input"
-                                value={formData.feedback_mode}
-                                onChange={(e) => setFormData({ ...formData, feedback_mode: e.target.value })}
-                            >
-                                <option value="IMMEDIATE">Immediate</option>
-                                <option value="DELAYED">Delayed</option>
-                            </select>
-                        </div>
-
                         <div className="modal-actions">
                             <button type="button" onClick={onClose} className="btn btn-secondary">
                                 Cancel

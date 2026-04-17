@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { puzzleAPI } from '../../services/api';
-import { Plus, Edit, Trash2, BarChart3, Send } from 'lucide-react';
+import { Plus, BarChart3, Send, Sparkles, CalendarDays, Tags, Layers3 } from 'lucide-react';
 import PublishPuzzleModal from './PublishPuzzleModal';
 import './Instructor.css';
 import './PublishModal.css';
@@ -86,76 +86,91 @@ export default function PuzzleManagerPage() {
                     </Link>
                 </div>
             ) : (
-                <div className="puzzles-table card">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Difficulty</th>
-                                <th>Status</th>
-                                <th>Tags</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {puzzles.map((puzzle) => (
-                                <tr key={puzzle.puzzle_id}>
-                                    <td>
-                                        <div className="puzzle-title">{puzzle.title}</div>
-                                        <div className="puzzle-description text-secondary">
-                                            {puzzle.description.substring(0, 60)}...
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`badge badge-${getDifficultyColor(puzzle.difficulty)}`}>
-                                            {puzzle.difficulty}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className={`badge badge-${getStatusColor(puzzle.status)}`}>
-                                            {puzzle.status}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="tags-cell">
-                                            {puzzle.tags.slice(0, 2).map((tag, index) => (
+                <div className="instructor-puzzle-gallery">
+                    {puzzles.map((puzzle) => (
+                        <article
+                            key={puzzle.puzzle_id}
+                            className={`instructor-puzzle-card card status-${puzzle.status?.toLowerCase()}`}
+                        >
+                            <div className="instructor-card-topline">
+                                <span className={`badge badge-${getStatusColor(puzzle.status)}`}>
+                                    {puzzle.status}
+                                </span>
+                                <span className={`badge badge-${getDifficultyColor(puzzle.difficulty)}`}>
+                                    {puzzle.difficulty}
+                                </span>
+                            </div>
+
+                            <div className="instructor-card-hero">
+                                <div className="instructor-card-icon">
+                                    <Sparkles size={18} />
+                                </div>
+                                <div>
+                                    <h3>{puzzle.title}</h3>
+                                    <p className="text-secondary">
+                                        {puzzle.description}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="instructor-card-meta">
+                                <div className="instructor-meta-pill">
+                                    <CalendarDays size={14} />
+                                    <span>{new Date(puzzle.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <div className="instructor-meta-pill">
+                                    <Layers3 size={14} />
+                                    <span>{puzzle.status === 'PUBLISHED' ? 'Live to students' : 'Ready to publish'}</span>
+                                </div>
+                            </div>
+
+                            <div className="instructor-card-tags">
+                                <div className="instructor-tag-heading">
+                                    <Tags size={14} />
+                                    <span>Topics</span>
+                                </div>
+                                <div className="tags-cell">
+                                    {puzzle.tags.length > 0 ? (
+                                        <>
+                                            {puzzle.tags.slice(0, 3).map((tag, index) => (
                                                 <span key={index} className="badge badge-primary">
                                                     {tag}
                                                 </span>
                                             ))}
-                                            {puzzle.tags.length > 2 && (
-                                                <span className="text-secondary">+{puzzle.tags.length - 2}</span>
+                                            {puzzle.tags.length > 3 && (
+                                                <span className="text-secondary">+{puzzle.tags.length - 3}</span>
                                             )}
-                                        </div>
-                                    </td>
-                                    <td>{new Date(puzzle.created_at).toLocaleDateString()}</td>
-                                    <td>
-                                        <div className="table-actions">
-                                            {puzzle.status !== 'PUBLISHED' ? (
-                                                <button
-                                                    onClick={() => setPublishingPuzzle(puzzle)}
-                                                    className="btn btn-primary"
-                                                    title="Publish to Students"
-                                                >
-                                                    <Send size={16} />
-                                                </button>
-                                            ) : (
-                                                <span className="badge badge-success">Published</span>
-                                            )}
-                                            <Link
-                                                to={`/instructor/analytics/${puzzle.puzzle_id}`}
-                                                className="btn btn-secondary"
-                                                title="View Analytics"
-                                            >
-                                                <BarChart3 size={16} />
-                                            </Link>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        </>
+                                    ) : (
+                                        <span className="text-secondary">No tags yet</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="instructor-card-actions">
+                                {puzzle.status !== 'PUBLISHED' ? (
+                                    <button
+                                        onClick={() => setPublishingPuzzle(puzzle)}
+                                        className="btn btn-primary"
+                                        title="Publish to Students"
+                                    >
+                                        <Send size={16} />
+                                        Publish
+                                    </button>
+                                ) : (
+                                    <span className="badge badge-success">Published</span>
+                                )}
+                                <Link
+                                    to={`/instructor/analytics/${puzzle.puzzle_id}`}
+                                    className="btn btn-secondary"
+                                    title="View Analytics"
+                                >
+                                    <BarChart3 size={16} />
+                                    Analytics
+                                </Link>
+                            </div>
+                        </article>
+                    ))}
                 </div>
             )}
 

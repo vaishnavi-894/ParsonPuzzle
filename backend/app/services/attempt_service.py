@@ -66,10 +66,14 @@ class AttemptService:
             puzzle_blocks
         )
         
-        # Calculate time taken (excluding pause duration)
+        # Prefer the client-tracked active work time when provided so
+        # leaving and returning to a puzzle doesn't inflate the duration.
         submitted_at = datetime.utcnow()
-        time_taken_sec = int((submitted_at - attempt.started_at).total_seconds())
-        time_taken_sec -= attempt.total_pause_duration_sec  # Subtract paused time
+        if submission.time_taken_sec is not None:
+            time_taken_sec = max(0, int(submission.time_taken_sec))
+        else:
+            time_taken_sec = int((submitted_at - attempt.started_at).total_seconds())
+            time_taken_sec -= attempt.total_pause_duration_sec  # Subtract paused time
         
         # Update attempt with results
         update_data = {

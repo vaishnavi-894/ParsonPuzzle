@@ -1,51 +1,51 @@
 :root {
-  /* Color Palette - Vibrant and Modern */
-  --primary-500: hsl(250, 85%, 60%);
-  --primary-600: hsl(250, 85%, 50%);
-  --primary-700: hsl(250, 85%, 40%);
+  --primary-500: hsl(18, 90%, 62%);
+  --primary-600: hsl(18, 86%, 54%);
+  --primary-700: hsl(18, 80%, 45%);
 
-  --secondary-500: hsl(320, 75%, 55%);
-  --secondary-600: hsl(320, 75%, 45%);
+  --secondary-500: hsl(193, 86%, 62%);
+  --secondary-600: hsl(193, 78%, 53%);
 
-  --success-500: hsl(145, 70%, 50%);
-  --success-600: hsl(145, 70%, 40%);
+  --accent-500: hsl(43, 92%, 62%);
+  --accent-600: hsl(43, 86%, 54%);
 
-  --error-500: hsl(0, 75%, 60%);
-  --error-600: hsl(0, 75%, 50%);
+  --success-500: hsl(151, 66%, 49%);
+  --success-600: hsl(151, 62%, 40%);
 
-  --warning-500: hsl(40, 90%, 55%);
-  --warning-600: hsl(40, 90%, 45%);
+  --error-500: hsl(358, 82%, 63%);
+  --error-600: hsl(358, 76%, 54%);
 
-  /* Neutral Colors */
-  --gray-50: hsl(240, 20%, 98%);
-  --gray-100: hsl(240, 15%, 95%);
-  --gray-200: hsl(240, 10%, 90%);
-  --gray-300: hsl(240, 8%, 80%);
-  --gray-400: hsl(240, 6%, 60%);
-  --gray-500: hsl(240, 5%, 45%);
-  --gray-600: hsl(240, 5%, 30%);
-  --gray-700: hsl(240, 6%, 20%);
-  --gray-800: hsl(240, 8%, 12%);
-  --gray-900: hsl(240, 10%, 8%);
+  --warning-500: hsl(39, 92%, 58%);
+  --warning-600: hsl(39, 86%, 49%);
 
-  /* Dark Mode Colors */
-  --bg-primary: hsl(240, 10%, 8%);
-  --bg-secondary: hsl(240, 8%, 12%);
-  --bg-tertiary: hsl(240, 6%, 16%);
+  --gray-50: hsl(32, 40%, 98%);
+  --gray-100: hsl(28, 25%, 94%);
+  --gray-200: hsl(24, 18%, 87%);
+  --gray-300: hsl(20, 14%, 74%);
+  --gray-400: hsl(18, 10%, 59%);
+  --gray-500: hsl(16, 10%, 44%);
+  --gray-600: hsl(237, 12%, 29%);
+  --gray-700: hsl(238, 18%, 20%);
+  --gray-800: hsl(240, 22%, 14%);
+  --gray-900: hsl(246, 28%, 9%);
 
-  --text-primary: hsl(0, 0%, 98%);
-  --text-secondary: hsl(240, 5%, 75%);
-  --text-tertiary: hsl(240, 5%, 55%);
+  --bg-primary: hsl(248, 31%, 7%);
+  --bg-secondary: hsl(243, 24%, 11%);
+  --bg-tertiary: hsl(239, 18%, 16%);
+  --bg-elevated: hsla(243, 30%, 16%, 0.86);
 
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
-  --gradient-success: linear-gradient(135deg, var(--success-500), hsl(180, 70%, 50%));
+  --text-primary: hsl(34, 100%, 98%);
+  --text-secondary: hsl(24, 24%, 78%);
+  --text-tertiary: hsl(22, 14%, 58%);
+
+  --gradient-primary: linear-gradient(135deg, var(--primary-500), var(--accent-500));
+  --gradient-success: linear-gradient(135deg, var(--success-500), var(--secondary-500));
   --gradient-error: linear-gradient(135deg, var(--error-500), var(--warning-500));
+  --gradient-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
 
-  /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.11);
+  --glass-shadow: 0 18px 48px rgba(4, 6, 20, 0.42);
 
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -75,12 +75,17 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--bg-primary);
+  font-family: "Aptos", "Segoe UI Variable Display", "Trebuchet MS", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(255, 140, 92, 0.18), transparent 28%),
+    radial-gradient(circle at 88% 14%, rgba(64, 196, 255, 0.16), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(255, 196, 87, 0.12), transparent 26%),
+    linear-gradient(180deg, #0c0b15 0%, #111022 38%, #0b0b12 100%);
   color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
 /* Scrollbar Styling */
@@ -115,11 +120,13 @@ h6 {
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: clamp(2.4rem, 4vw, 3.4rem);
+  letter-spacing: -0.04em;
 }
 
 h2 {
-  font-size: 2rem;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  letter-spacing: -0.03em;
 }
 
 h3 {
@@ -152,7 +159,7 @@ p {
   font-size: 0.875rem;
   font-weight: 600;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   cursor: pointer;
   transition: all var(--transition-base);
   text-decoration: none;
@@ -162,23 +169,23 @@ p {
 .btn-primary {
   background: var(--gradient-primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 10px 28px rgba(255, 126, 69, 0.28);
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 14px 32px rgba(255, 126, 69, 0.34);
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
   border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-  background: var(--gray-700);
-  border-color: var(--gray-600);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .btn-success {
@@ -204,25 +211,27 @@ p {
 
 /* Card Styles */
 .card {
-  background: var(--glass-bg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025)),
+    rgba(14, 14, 24, 0.86);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   padding: var(--spacing-xl);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(18px);
   box-shadow: var(--glass-shadow);
   transition: all var(--transition-base);
 }
 
 .card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 190, 130, 0.22);
+  box-shadow: 0 18px 54px rgba(4, 6, 20, 0.48);
 }
 
 /* Input Styles */
 .input {
   width: 100%;
   padding: var(--spacing-md);
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -233,8 +242,8 @@ p {
 
 .input:focus {
   outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  border-color: rgba(255, 153, 102, 0.82);
+  box-shadow: 0 0 0 3px rgba(255, 126, 69, 0.12);
 }
 
 .input::placeholder {
@@ -287,8 +296,8 @@ p {
 }
 
 .badge-primary {
-  background: rgba(139, 92, 246, 0.2);
-  color: var(--primary-500);
+  background: rgba(255, 126, 69, 0.18);
+  color: var(--accent-500);
 }
 
 /* Container */
