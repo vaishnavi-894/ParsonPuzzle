@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { CheckCircle2, Circle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import './Auth.css';
 
@@ -13,6 +14,8 @@ export default function RegisterPage() {
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const { register } = useAuth();
     const navigate = useNavigate();
@@ -24,18 +27,51 @@ export default function RegisterPage() {
         });
     };
 
+    const passwordChecks = [
+        {
+            label: 'At least 10 characters',
+            valid: formData.password.length >= 10,
+        },
+        {
+            label: 'One uppercase letter',
+            valid: /[A-Z]/.test(formData.password),
+        },
+        {
+            label: 'One lowercase letter',
+            valid: /[a-z]/.test(formData.password),
+        },
+        {
+            label: 'One number',
+            valid: /\d/.test(formData.password),
+        },
+        {
+            label: 'One special character',
+            valid: /[^A-Za-z0-9]/.test(formData.password),
+        },
+    ];
+
+    const passedChecks = passwordChecks.filter(check => check.valid).length;
+    const strengthPct = (passedChecks / passwordChecks.length) * 100;
+    const strengthLabel =
+        passedChecks <= 2 ? 'Needs work' :
+        passedChecks <= 4 ? 'Good' :
+        'Strong';
+    const strengthClass =
+        passedChecks <= 2 ? 'weak' :
+        passedChecks <= 4 ? 'medium' :
+        'strong';
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
-        // Validation
         if (formData.password !== formData.confirmPassword) {
             setError('Passwords do not match');
             return;
         }
 
-        if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters');
+        if (passedChecks < passwordChecks.length) {
+            setError('Please create a stronger password before signing up');
             return;
         }
 
@@ -116,30 +152,79 @@ export default function RegisterPage() {
 
                     <div className="form-group">
                         <label htmlFor="password">Password</label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            className="input"
-                            placeholder="••••••••"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div className="password-input-shell">
+                            <input
+                                id="password"
+                                name="password"
+                                type={showPassword ? 'text' : 'password'}
+                                className="input password-input"
+                                placeholder="Create a secure password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                required
+                            />
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() => setShowPassword(prev => !prev)}
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+
+                        <div className={`password-strength-card ${strengthClass}`}>
+                            <div className="password-strength-header">
+                                <div className="password-strength-title">
+                                    <ShieldCheck size={16} />
+                                    <span>Password strength</span>
+                                </div>
+                                <span className={`strength-badge ${strengthClass}`}>{strengthLabel}</span>
+                            </div>
+
+                            <div className="strength-meter">
+                                <div
+                                    className={`strength-meter-fill ${strengthClass}`}
+                                    style={{ width: `${strengthPct}%` }}
+                                />
+                            </div>
+
+                            <div className="password-checklist">
+                                {passwordChecks.map((check) => (
+                                    <div
+                                        key={check.label}
+                                        className={`password-check-item ${check.valid ? 'valid' : ''}`}
+                                    >
+                                        {check.valid ? <CheckCircle2 size={15} /> : <Circle size={15} />}
+                                        <span>{check.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="confirmPassword">Confirm Password</label>
-                        <input
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            className="input"
-                            placeholder="••••••••"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div className="password-input-shell">
+                            <input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type={showConfirmPassword ? 'text' : 'password'}
+                                className="input password-input"
+                                placeholder="Type it again"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                required
+                            />
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() => setShowConfirmPassword(prev => !prev)}
+                                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                            >
+                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
                     </div>
 
                     <button
