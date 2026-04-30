@@ -43,6 +43,24 @@ export default function ResultsPage() {
         }
     };
 
+    const getPositionStats = (attemptData, puzzleBlocks) => {
+        const feedback = attemptData?.feedback || {};
+        const totalBlocks = feedback.total_blocks ?? puzzleBlocks.length ?? 0;
+        const correctCount = feedback.correct_count ?? Math.round((attemptData?.score || 0) * totalBlocks);
+        const incorrectCount = feedback.incorrect_count ?? Math.max(0, totalBlocks - correctCount);
+        const percentage = totalBlocks > 0 ? Math.round((correctCount / totalBlocks) * 100) : 0;
+
+        return {
+            totalBlocks,
+            correctCount,
+            incorrectCount,
+            submittedCount: feedback.submitted_count ?? attemptData?.submitted_order?.length ?? 0,
+            missingCount: feedback.missing_count ?? Math.max(0, totalBlocks - (attemptData?.submitted_order?.length ?? 0)),
+            positionResults: feedback.position_results ?? [],
+            percentage,
+        };
+    };
+
     if (loading) {
         return <div className="page-container"><div className="text-secondary">Loading results...</div></div>;
     }
@@ -57,6 +75,7 @@ export default function ResultsPage() {
     // Calculate remaining attempts
     const submittedAttempts = allAttempts.filter(a => a.submitted_at).length;
     const remainingAttempts = assignment.max_attempts - submittedAttempts;
+    const positionStats = getPositionStats(attempt, blocks);
 
     // Determine which result page to show
     if (attempt.is_correct) {
@@ -65,6 +84,7 @@ export default function ResultsPage() {
             attempt={attempt}
             blocks={blocks}
             totalTimeSec={totalTimeSec}
+            positionStats={positionStats}
         />;
     } else if (remainingAttempts > 0) {
         // In Progress: Show encouragement, NO solution
@@ -72,6 +92,7 @@ export default function ResultsPage() {
             attempt={attempt}
             blocks={blocks}
             totalTimeSec={totalTimeSec}
+            positionStats={positionStats}
         />;
     } else {
         // Failed: Show solution for learning
@@ -79,6 +100,7 @@ export default function ResultsPage() {
             attempt={attempt}
             blocks={blocks}
             totalTimeSec={totalTimeSec}
+            positionStats={positionStats}
         />;
     }
 }

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Navbar from './components/common/Navbar';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import HomePage from './components/HomePage';
 import LoginPage from './components/auth/LoginPage';
 import RegisterPage from './components/auth/RegisterPage';
 import PuzzleListPage from './components/student/PuzzleListPage';
@@ -24,6 +25,7 @@ function AppRoutes() {
                 {/* Public routes */}
                 <Route path="/login" element={user ? <Navigate to={user.role === 'STUDENT' ? '/student/puzzles' : '/instructor/puzzles'} /> : <LoginPage />} />
                 <Route path="/register" element={user ? <Navigate to={user.role === 'STUDENT' ? '/student/puzzles' : '/instructor/puzzles'} /> : <RegisterPage />} />
+                <Route path="/" element={<HomePage />} />
 
                 {/* Student routes */}
                 <Route path="/student/puzzles" element={<ProtectedRoute><PuzzleListPage /></ProtectedRoute>} />
@@ -38,7 +40,7 @@ function AppRoutes() {
                 <Route path="/instructor/analytics" element={<ProtectedRoute requireInstructor><GlobalInstructorAnalyticsPage /></ProtectedRoute>} />
 
                 {/* Default redirect */}
-                <Route path="/" element={<Navigate to={user ? (user.role === 'STUDENT' ? '/student/puzzles' : '/instructor/puzzles') : '/login'} />} />
+                <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </>
     );

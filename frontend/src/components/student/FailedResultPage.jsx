@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { XCircle, Home, BookOpen } from 'lucide-react';
 import './Student.css';
 
-export default function FailedResultPage({ attempt, blocks, totalTimeSec }) {
+export default function FailedResultPage({ attempt, blocks, totalTimeSec, positionStats }) {
     const navigate = useNavigate();
-    const { score, submitted_order } = attempt;
-    const scorePct = Number.isFinite(score) ? Math.round(score * 100) : 0;
+    const { submitted_order } = attempt;
+    const scorePct = positionStats?.percentage ?? 0;
 
     // Create a map for easy block lookup
     const blockMap = {};
@@ -19,6 +19,7 @@ export default function FailedResultPage({ attempt, blocks, totalTimeSec }) {
 
     // Get user's submitted order
     const userOrder = submitted_order ? submitted_order.map(id => blockMap[id]).filter(Boolean) : [];
+    const missingCount = positionStats?.missingCount ?? 0;
 
     return (
         <div className="page-container">
@@ -33,6 +34,14 @@ export default function FailedResultPage({ attempt, blocks, totalTimeSec }) {
                     <div className="stat-card card">
                         <h3>Correct Position</h3>
                         <div className="stat-value">{scorePct}%</div>
+                        <p className="stat-subvalue">
+                            {positionStats?.correctCount ?? 0} of {positionStats?.totalBlocks ?? 0} blocks correct
+                        </p>
+                        {missingCount > 0 && (
+                            <p className="stat-subvalue">
+                                {positionStats?.submittedCount ?? userOrder.length} arranged, {missingCount} missing
+                            </p>
+                        )}
                     </div>
                     <div className="stat-card card">
                         <h3>Total Time</h3>

@@ -99,6 +99,7 @@ export default function PuzzleSolvePage() {
     const [elapsed, setElapsed]                   = useState('0:00');
     const [elapsedSeconds, setElapsedSeconds]     = useState(0);
     const [timerStartedAt, setTimerStartedAt]     = useState(null);
+    const [retrySeedAttempt, setRetrySeedAttempt] = useState(null);
     // Tracks when the student FIRST opens a question — timer only starts then
 
     /* ── Per-scope arranged blocks ─────────────────────────────────── */
@@ -273,6 +274,7 @@ export default function PuzzleSolvePage() {
                 setAttemptId(active.attempt_id);
                 setStartTime(new Date(active.started_at).getTime());
                 setHasActiveAttempt(true);
+                setRetrySeedAttempt(null);
 
                 // ── Restore from localStorage ────────────────────────
                 const storageKey = `parsons_state_${assignmentId}`;
@@ -282,7 +284,13 @@ export default function PuzzleSolvePage() {
                     if (savedRaw) {
                         const saved = JSON.parse(savedRaw);
                         if (saved.attemptId === active.attempt_id) {
-                            setScopeEditors(saved.scopeEditors || {});
+                            const restoredScopeEditors = normalizeScopeEditors(
+                                saved.scopeEditors || {},
+                                blocks,
+                                hdrs,
+                                fnList
+                            );
+                            setScopeEditors(restoredScopeEditors);
 
                             // Restore timer
                             setElapsedSeconds(saved.elapsedSeconds || 0);
@@ -298,7 +306,10 @@ export default function PuzzleSolvePage() {
 
                             // Restore live editor + bank for the current scope
                             if (restoredPath.length > 0) {
-                                const restoredEditor = saved.currentEditorBlocks || [];
+                                const restoredKey = scopeKeyStable(restoredPath);
+                                const restoredEditor = (saved.currentEditorBlocks || []).length > 0
+                                    ? saved.currentEditorBlocks
+                                    : restoredScopeEditors[restoredKey] || [];
                                 const scopeAll = getScopeBlocksRaw(blocks, restoredPath, hdrs);
                                 const placedIds = new Set(restoredEditor.map(b => b.block_id));
                                 setEditorBlocks(restoredEditor);
@@ -323,6 +334,8 @@ export default function PuzzleSolvePage() {
             } else {
                 const done = attempts.some(a => a.is_correct);
                 if (!done) setShowStartModal(true);
+                const lastSubmitted = attempts.find(a => a.submitted_at && a.submitted_order?.length);
+                setRetrySeedAttempt(lastSubmitted || null);
                 setScopePath([]);
                 setScopeLabels([]);
                 setEditorBlocks([]);
@@ -347,10 +360,39 @@ export default function PuzzleSolvePage() {
                 assignment_id: assignmentId,
                 started_at: new Date().toISOString(),
             });
-            setAttemptId(res.data.attempt_id);
+            const nextAttemptId = res.data.attempt_id;
+            const seededScopeEditors = buildScopeEditorsFromSubmittedOrder(
+                retrySeedAttempt?.submitted_order || [],
+                allBlocks,
+                functionHeaders,
+                functions
+            );
+
+            if (Object.keys(seededScopeEditors).length > 0) {
+                localStorage.setItem(`parsons_state_${assignmentId}`, JSON.stringify({
+                    attemptId: nextAttemptId,
+                    scopeEditors: seededScopeEditors,
+                    currentScopePath: [],
+                    currentScopeLabels: [],
+                    currentEditorBlocks: [],
+                    pendingLoopStack: [],
+                    elapsedSeconds: 0,
+                }));
+                setScopeEditors(seededScopeEditors);
+            } else {
+                localStorage.removeItem(`parsons_state_${assignmentId}`);
+                setScopeEditors({});
+            }
+
+            setAttemptId(nextAttemptId);
             setStartTime(Date.now());
             setHasActiveAttempt(true);
             setShowStartModal(false);
+            setScopePath([]);
+            setScopeLabels([]);
+            setEditorBlocks([]);
+            setBankBlocks([]);
+            setPendingLoopStack([]);
             setElapsedSeconds(0);
             setTimerStartedAt(null);
             setElapsed('0:00');
@@ -476,9 +518,94 @@ export default function PuzzleSolvePage() {
     /* ── Submit readiness ──────────────────────────────────────────── */
     const totalPlaced = () => {
         let count = 0;
-        for (const arr of Object.values(scopeEditors)) count += arr.length;
-        count += editorBlocks.length;
-        return count;
+        const finalScopeEditors = buildScopeEditorsSnapshot(scopePath, editorBlocks);
+        const placedIds = new Set();
+        for (const arr of Object.values(finalScopeEditors)) {
+            arr.forEach(block => placedIds.add(block.block_id));
+        }
+        editorBlocks.forEach(block => placedIds.add(block.block_id));
+        pendingLoopStack.forEach(({ block }) => placedIds.add(block.block_id));
+        return placedIds.size;
+    };
+
+    const getFinalSubmittedOrder = (finalScopeEditors) => {
+        const submittedOrder = [];
+
+        const appendScope = (path) => {
+            const scopeBlocks = finalScopeEditors[scopeKey(path)] || [];
+
+            scopeBlocks.forEach((block) => {
+                submittedOrder.push(block.block_id);
+
+                if (block.is_scope_header && block.scope_type?.includes('loop') && block.scope_id) {
+                    appendScope([...path, block.scope_id]);
+                }
+            });
+        };
+
+        functions.forEach((fn) => {
+            const header = functionHeaders[fn];
+            const scopeToken = header?.scope_id ?? fn;
+            appendScope([scopeToken]);
+        });
+
+        return submittedOrder;
+    };
+
+    const buildScopeEditorsFromSubmittedOrder = (submittedOrder, blocksData, headersData, fnList) => {
+        if (!submittedOrder?.length) return {};
+
+        const blockMap = Object.fromEntries(blocksData.map((block) => [block.block_id, block]));
+        const groupedEditors = {};
+
+        const getScopePathForBlock = (block) => {
+            const functionToken = headersData[block.function_name]?.scope_id ?? block.function_name;
+            if (!functionToken) return [];
+
+            const ancestorScopeIds = [];
+            let currentScopeId = block.parent_scope_id;
+
+            while (currentScopeId && currentScopeId !== functionToken) {
+                ancestorScopeIds.unshift(currentScopeId);
+                const parentBlock = blocksData.find((candidate) => candidate.scope_id === currentScopeId);
+                currentScopeId = parentBlock?.parent_scope_id ?? null;
+            }
+
+            return [functionToken, ...ancestorScopeIds];
+        };
+
+        submittedOrder.forEach((blockId) => {
+            const block = blockMap[blockId];
+            if (!block) return;
+
+            const path = getScopePathForBlock(block);
+            const key = scopeKeyStable(path);
+
+            if (!groupedEditors[key]) groupedEditors[key] = [];
+            groupedEditors[key].push(block);
+        });
+
+        fnList.forEach((fn) => {
+            const rootKey = scopeKeyStable([headersData[fn]?.scope_id ?? fn]);
+            if (!groupedEditors[rootKey]) groupedEditors[rootKey] = [];
+        });
+
+        return groupedEditors;
+    };
+
+    const normalizeScopeEditors = (scopeEditorsData, blocksData, headersData, fnList) => {
+        const blockIds = [];
+        const seen = new Set();
+
+        Object.values(scopeEditorsData || {}).forEach((editor) => {
+            (editor || []).forEach((block) => {
+                if (!block?.block_id || seen.has(block.block_id)) return;
+                seen.add(block.block_id);
+                blockIds.push(block.block_id);
+            });
+        });
+
+        return buildScopeEditorsFromSubmittedOrder(blockIds, blocksData, headersData, fnList);
     };
 
     /* ── Function done status ──────────────────────────────────────── */
@@ -508,7 +635,10 @@ export default function PuzzleSolvePage() {
             const tok  = hdrs?.scope_id ?? fn;
 
             // All blocks that belong to this function at any nesting depth
-            const fnBlocks = allBlocks.filter(b => b.function_name === fn);
+            const fnBlocks = allBlocks.filter(b =>
+                b.function_name === fn &&
+                !(b.is_scope_header && b.scope_type === 'function')
+            );
             const total    = fnBlocks.length;
             const placed   = fnBlocks.filter(b => savedPlacedIds.has(b.block_id)).length;
 
@@ -546,14 +676,10 @@ export default function PuzzleSolvePage() {
 
         try {
             const finalElapsedSeconds = stopTimer();
-            const allPlaced = [];
-            for (const arr of Object.values(finalScopeEditors)) {
-                allPlaced.push(...arr);
-            }
-            allPlaced.sort((a, b) => (a.correct_position ?? 0) - (b.correct_position ?? 0));
+            const submittedOrder = getFinalSubmittedOrder(finalScopeEditors);
 
             await attemptAPI.submit(attemptId, {
-                submitted_order: allPlaced.map(b => b.block_id),
+                submitted_order: submittedOrder,
                 time_taken_sec: finalElapsedSeconds,
             });
             // Clear persisted state now that the attempt is submitted
@@ -622,6 +748,7 @@ export default function PuzzleSolvePage() {
             b => b.block_id === active.id
         );
         if (
+            container !== 'editor' &&
             overContainer === 'editor' &&
             block?.is_scope_header &&
             block?.scope_type?.includes('loop') &&
@@ -797,6 +924,8 @@ export default function PuzzleSolvePage() {
                     e.stopPropagation();
                     enterScope(block.scope_id, block.text.trim().slice(0, 30) + '…');
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
             >
                 <ChevronRight size={12} /> Inside
             </button>
@@ -917,6 +1046,8 @@ export default function PuzzleSolvePage() {
                                                         className="drill-btn edit-loop-btn"
                                                         title="Re-arrange loop body"
                                                         onClick={() => enterScope(block.scope_id, block.text.trim().slice(0, 35) + '…')}
+                                                        onMouseDown={(e) => e.stopPropagation()}
+                                                        onPointerDown={(e) => e.stopPropagation()}
                                                     >
                                                         <Repeat size={11} />{' '}
                                                         {(scopeEditors[scopeKey([...scopePath, block.scope_id])] || []).length > 0 ? 'Edit' : 'Enter'}

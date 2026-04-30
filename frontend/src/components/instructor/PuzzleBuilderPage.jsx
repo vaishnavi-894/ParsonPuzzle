@@ -6,9 +6,16 @@ import { Plus, Save, Code2, Eye } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ThemeSelect from '../common/ThemeSelect';
 import './Instructor.css';
 
 export default function PuzzleBuilderPage() {
+    const difficultyOptions = [
+        { value: 'EASY', label: 'Easy' },
+        { value: 'MEDIUM', label: 'Medium' },
+        { value: 'HARD', label: 'Hard' },
+    ];
+
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -94,9 +101,12 @@ export default function PuzzleBuilderPage() {
     // ── Regex helpers mirroring the backend parser ──────────────────
     // Explicit pseudo/Python patterns
     const EXPLICIT_FUNC_PATTERNS = [
+        /^\s*algorithm\s+(\w+)\s*\(/i,
         /^\s*def\s+(\w+)\s*\(/i,
         /^\s*function\s+(\w+)\s*\(/i,
         /^\s*(?:procedure|sub|method)\s+(\w+)\s*\(/i,
+        /^\s*(\w+)\s+function\s*:/i,
+        /^\s*function\s+(\w+)\s*:/i,
     ];
 
     // Words that can NEVER be function names
@@ -110,7 +120,7 @@ export default function PuzzleBuilderPage() {
         'static_cast','dynamic_cast','reinterpret_cast','const_cast',
         'cout','cin','printf','scanf','print','println',
         'assert','exit','abort',
-        'def','function','procedure','sub','method',
+        'algorithm','def','function','procedure','sub','method',
     ]);
 
     const matchFunction = (line) => {
@@ -289,17 +299,13 @@ export default function PuzzleBuilderPage() {
 
                     <div className="form-group">
                         <label htmlFor="difficulty">Difficulty</label>
-                        <select
+                        <ThemeSelect
                             id="difficulty"
                             name="difficulty"
-                            className="input"
                             value={puzzle.difficulty}
                             onChange={handlePuzzleChange}
-                        >
-                            <option value="EASY">Easy</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="HARD">Hard</option>
-                        </select>
+                            options={difficultyOptions}
+                        />
                     </div>
 
                     <div className="form-group">

@@ -36,8 +36,9 @@ export default function DraggableBlock({ id, text, index, variant = 'bank', font
             style={style}
             className={`draggable-block ${variant}-variant ${isDragging ? 'dragging' : ''}`}
             {...(isOverlay ? {} : attributes)}
+            {...(isOverlay ? {} : listeners)}
         >
-            <div className="block-handle" {...(isOverlay ? {} : listeners)}>
+            <div className="block-handle">
                 <GripVertical size={16} />
             </div>
 

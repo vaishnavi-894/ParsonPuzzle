@@ -1,0 +1,194 @@
+.cover-page {
+    min-height: calc(100vh - 60px);
+    display: flex;
+    align-items: center;
+    padding: clamp(2rem, 5vw, 5rem);
+    overflow: hidden;
+}
+
+.cover-hero {
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
+    gap: clamp(2rem, 5vw, 5.5rem);
+    align-items: center;
+}
+
+.cover-copy {
+    max-width: 620px;
+}
+
+.cover-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid rgba(255, 180, 116, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--accent-500);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.cover-copy h1 {
+    margin-bottom: 1.1rem;
+    font-size: clamp(3.6rem, 8vw, 7.2rem);
+    line-height: 0.92;
+    letter-spacing: 0;
+}
+
+.cover-copy p {
+    max-width: 54ch;
+    color: var(--text-secondary);
+    font-size: clamp(1.05rem, 1.6vw, 1.22rem);
+}
+
+.cover-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin-top: 1.8rem;
+}
+
+.cover-workspace {
+    min-height: 520px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    background:
+        radial-gradient(circle at 80% 12%, rgba(84, 205, 255, 0.16), transparent 32%),
+        radial-gradient(circle at 20% 90%, rgba(255, 158, 89, 0.14), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)),
+        rgba(13, 15, 28, 0.9);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+}
+
+.cover-window-bar {
+    display: flex;
+    gap: 0.45rem;
+    padding: 0.25rem 0.2rem 1rem;
+}
+
+.cover-window-bar span {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.24);
+}
+
+.cover-preview-grid {
+    height: calc(100% - 2rem);
+    display: grid;
+    grid-template-columns: 1.35fr 0.8fr;
+    gap: 1rem;
+}
+
+.cover-code-panel,
+.cover-block-panel {
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 1rem;
+    background: rgba(7, 9, 18, 0.54);
+}
+
+.cover-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.cover-line,
+.cover-block,
+.cover-complete {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 56px;
+    margin-bottom: 0.7rem;
+    padding: 0.85rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.055);
+    color: var(--text-primary);
+    font-family: "Courier New", monospace;
+    font-size: 0.9rem;
+}
+
+.cover-line span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 0.45rem;
+    background: rgba(34, 197, 94, 0.18);
+    color: var(--success-500);
+    font-family: inherit;
+    font-weight: 700;
+}
+
+.cover-line.done {
+    border-left: 3px solid var(--success-500);
+}
+
+.cover-line.active {
+    border-left: 3px solid var(--accent-500);
+    box-shadow: 0 14px 36px rgba(255, 190, 92, 0.12);
+}
+
+.cover-line.muted {
+    opacity: 0.64;
+}
+
+.cover-block {
+    border: 1px dashed rgba(255, 168, 108, 0.26);
+    color: var(--text-secondary);
+}
+
+.cover-complete {
+    margin-top: 1.2rem;
+    justify-content: center;
+    background: rgba(34, 197, 94, 0.12);
+    color: hsl(151, 76%, 64%);
+    font-family: inherit;
+    font-weight: 800;
+}
+
+@media (max-width: 900px) {
+    .cover-page {
+        align-items: flex-start;
+        padding: 2rem 1rem;
+    }
+
+    .cover-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .cover-workspace {
+        min-height: 420px;
+    }
+}
+
+@media (max-width: 560px) {
+    .cover-actions {
+        flex-direction: column;
+    }
+
+    .cover-actions .btn {
+        width: 100%;
+    }
+
+    .cover-preview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cover-workspace {
+        min-height: auto;
+    }
+}

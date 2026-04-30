@@ -8,6 +8,11 @@ export default function Navbar() {
     const { user, logout, isInstructor } = useAuth();
     const navigate = useNavigate();
 
+    const formatRole = (role) => {
+        if (!role) return '';
+        return role.charAt(0) + role.slice(1).toLowerCase();
+    };
+
     const handleLogout = () => {
         logout();
         navigate('/login');
@@ -48,7 +53,7 @@ export default function Navbar() {
                     <div className="nav-user">
                         <User size={18} />
                         <span>{user.name}</span>
-                        <span className="badge badge-primary">{user.role}</span>
+                        <span className="badge badge-primary">{formatRole(user.role)}</span>
                     </div>
 
                     <button onClick={handleLogout} className="btn btn-secondary">

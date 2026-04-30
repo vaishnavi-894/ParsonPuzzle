@@ -2,9 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CheckCircle2, Circle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import ThemeSelect from '../common/ThemeSelect';
 import './Auth.css';
 
 export default function RegisterPage() {
+    const roleOptions = [
+        { value: 'STUDENT', label: 'Student' },
+        { value: 'INSTRUCTOR', label: 'Instructor' },
+    ];
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -138,16 +144,13 @@ export default function RegisterPage() {
 
                     <div className="form-group">
                         <label htmlFor="role">Role</label>
-                        <select
+                        <ThemeSelect
                             id="role"
                             name="role"
-                            className="input"
                             value={formData.role}
                             onChange={handleChange}
-                        >
-                            <option value="STUDENT">Student</option>
-                            <option value="INSTRUCTOR">Instructor</option>
-                        </select>
+                            options={roleOptions}
+                        />
                     </div>
 
                     <div className="form-group">

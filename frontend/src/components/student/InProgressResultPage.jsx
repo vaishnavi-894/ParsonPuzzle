@@ -3,33 +3,47 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 import './Student.css';
 
-export default function InProgressResultPage({ attempt, blocks, totalTimeSec }) {
+export default function InProgressResultPage({ attempt, blocks, totalTimeSec, positionStats }) {
     const navigate = useNavigate();
-    const { score, submitted_order, assignment_id: assignmentId } = attempt;
-    const scorePct = Number.isFinite(score) ? Math.round(score * 100) : 0;
+    const { submitted_order, assignment_id: assignmentId } = attempt;
+    const scorePct = positionStats?.percentage ?? 0;
 
-    // Create a map for easy block lookup
     const blockMap = {};
     blocks.forEach(block => {
         blockMap[block.block_id] = block;
     });
 
-    // Get user's submitted order
     const userOrder = submitted_order ? submitted_order.map(id => blockMap[id]).filter(Boolean) : [];
+    const correctnessByBlockId = new Map(
+        (positionStats?.positionResults || []).map(item => [item.block_id, item.is_correct])
+    );
+    const missingCount = positionStats?.missingCount ?? 0;
 
     return (
         <div className="page-container">
             <div className="results-container">
                 <div className="results-header card in-progress">
                     <AlertCircle size={64} className="text-warning" />
-                    <h1>Keep Trying! 💪</h1>
-                    <p>You're learning - try again!</p>
+                    <h1>{missingCount > 0 ? 'Almost There' : 'Keep Trying!'}</h1>
+                    <p>
+                        {missingCount > 0
+                            ? `Arrange all blocks to finish. ${missingCount} blocks are still missing.`
+                            : "You're learning - try again!"}
+                    </p>
                 </div>
 
                 <div className="results-stats">
                     <div className="stat-card card">
                         <h3>Correct Position</h3>
                         <div className="stat-value">{scorePct}%</div>
+                        <p className="stat-subvalue">
+                            {positionStats?.correctCount ?? 0} of {positionStats?.totalBlocks ?? 0} blocks correct
+                        </p>
+                        {missingCount > 0 && (
+                            <p className="stat-subvalue">
+                                {positionStats?.submittedCount ?? userOrder.length} arranged, {missingCount} missing
+                            </p>
+                        )}
                     </div>
                     <div className="stat-card card">
                         <h3>Total Time</h3>
@@ -37,14 +51,16 @@ export default function InProgressResultPage({ attempt, blocks, totalTimeSec }) 
                     </div>
                 </div>
 
-                {/* Show user's submission with highlighting */}
                 {userOrder.length > 0 && (
                     <div className="solution-section card">
                         <h3>Your Submission</h3>
                         <p className="text-secondary">Green = Correct Position | Red = Wrong Position</p>
                         <div className="solution-blocks">
                             {userOrder.map((block, index) => {
-                                const isCorrectPosition = block.correct_position === index;
+                                const isCorrectPosition = correctnessByBlockId.has(block.block_id)
+                                    ? correctnessByBlockId.get(block.block_id)
+                                    : block.correct_position === index;
+
                                 return (
                                     <div key={block.block_id} className={`solution-block ${isCorrectPosition ? 'correct' : 'incorrect'}`}>
                                         <span className="block-number">{index + 1}</span>

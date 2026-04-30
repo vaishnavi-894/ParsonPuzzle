@@ -54,6 +54,7 @@ class AttemptResponse(BaseModel):
     started_at: datetime
     submitted_at: Optional[datetime]
     time_taken_sec: Optional[int]
+    submitted_order: List[str] = Field(default_factory=list)
     is_correct: Optional[bool]
     score: Optional[float]
     feedback: Optional[Dict]

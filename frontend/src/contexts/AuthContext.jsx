@@ -50,9 +50,12 @@ export const AuthProvider = ({ children }) => {
 
             return { success: true, user: userData };
         } catch (error) {
+            const isUnauthorized = error.response?.status === 401;
             return {
                 success: false,
-                error: error.response?.data?.detail || 'Login failed'
+                error: isUnauthorized
+                    ? 'Wrong password'
+                    : (error.response?.data?.detail || 'Login failed')
             };
         }
     };

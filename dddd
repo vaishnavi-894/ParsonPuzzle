@@ -1,0 +1,20 @@
+Algorithm TwoSumIndices(arr, target):
+    Initialize an empty hash map called indexMap
+    
+    For i from 0 to length of arr - 1:
+        Set currentNumber = arr[i]
+        Set complement = target - currentNumber
+        
+        If complement is in indexMap:
+            Return [indexMap[complement], i]
+        
+        Put (currentNumber, i) into indexMap
+    
+    Return Null (or throw error if no solution)
+
+Main Function:
+    Input array = [2, 7, 11, 15]
+    Input target = 9
+    
+    result = TwoSumIndices(array, target)
+    Print result

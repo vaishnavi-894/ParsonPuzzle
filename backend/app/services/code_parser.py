@@ -37,9 +37,12 @@ from uuid import uuid4
 # Explicit function-keyword patterns (Python / generic pseudocode)
 # These take priority over the generic C-style detector.
 _EXPLICIT_FUNC_PATTERNS = [
+    re.compile(r'^\s*algorithm\s+(\w+)\s*\(',        re.IGNORECASE),
     re.compile(r'^\s*def\s+(\w+)\s*\(',             re.IGNORECASE),
     re.compile(r'^\s*function\s+(\w+)\s*\(',         re.IGNORECASE),
     re.compile(r'^\s*(?:procedure|sub|method)\s+(\w+)\s*\(', re.IGNORECASE),
+    re.compile(r'^\s*(\w+)\s+function\s*:',          re.IGNORECASE),
+    re.compile(r'^\s*function\s+(\w+)\s*:',          re.IGNORECASE),
 ]
 
 # A scope-opening line ends with { or :
@@ -78,7 +81,7 @@ _FUNC_BLACKLIST = frozenset([
     'cout', 'cin', 'printf', 'scanf', 'print', 'println',
     'assert', 'exit', 'abort',
     # pseudocode keywords (handled by explicit patterns)
-    'def', 'function', 'procedure', 'sub', 'method',
+    'algorithm', 'def', 'function', 'procedure', 'sub', 'method',
 ])
 
 
